@@ -2,7 +2,7 @@ import bluetooth
 
 def list_bluetooth_devices():
     print("Procurando dispositivos Bluetooth...")
-    nearby_devices = bluetooth.discover_devices(duration=8, lookup_names=True, flush_cache=True, lookup_oui=False)
+    nearby_devices = bluetooth.discover_devices(duration=8, lookup_names=True, flush_cache=True, lookup_class=False)
     
     if not nearby_devices:
         print("Nenhum dispositivo encontrado.")

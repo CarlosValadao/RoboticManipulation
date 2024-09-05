@@ -13,3 +13,5 @@ def connect_to_nxt():
         return None
 
 nxt_brick = connect_to_nxt()
+
+nxt_brick.sock.close()

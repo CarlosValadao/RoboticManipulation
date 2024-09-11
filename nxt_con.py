@@ -1,17 +1,17 @@
+import nxt
 import nxt.locator
-from nxt.bluesock import BlueSock
 
-def connect_to_nxt():
-    # Substitua '00:16:53:XX:XX:XX' pelo endereço Bluetooth do seu NXT Brick
-    btsock = BlueSock('00:16:53:XX:XX:XX')  
-    if btsock:
-        nxt_brick = btsock.connect()
-        print("Conectado ao NXT Brick via Bluetooth!")
-        return nxt_brick
-    else:
-        print("Não foi possível encontrar o NXT Brick.")
-        return None
+# ENDERECO MAC DO NXT 01 (COM DISPLAY BOM E EMITINDO SONS MANEIROS)
+NXT_MAC_ADDRESS = "00:16:53:09:81:69"
 
-nxt_brick = connect_to_nxt()
-
-nxt_brick.sock.close()
+with nxt.locator.find() as b:
+    # Get the motor connected to the port A.
+    mymotor = b.get_motor(nxt.motor.Port.A)
+    # Full circle in one direction.
+    mymotor.turn(25, 360)
+    # Full circle in the opposite direction.
+    mymotor.turn(-25, 360)
+    print(b.get_device_info())
+    print(b.get_firmware_version())
+    b.play_sound_file(False, "avemaria.mp3")
+    print(b.get_battery_level())

@@ -4,31 +4,33 @@
 // Sensor de toque ->     porta 1
 // Sensor ultrassonico -> porta 4
 
-void goFoward(char pwr, unsigned sec) {
-    OnRevSync(OUT_AB, pwr);
-    Wait(sec);
-    Off(OUT_AB);
+//void GoFoward(char pwr, unsgined sec);
+
+void GoFoward(byte power, byte seconds);
+void GoBackward(byte power, byte seconds);
+void configSensors();
+void grab();
+void drop();
+
+task main() {
+  OnFwdSync(OUT_AB, 60, 0);
+  Wait(3000);
+  Off(OUT_AB);
+  OnRevSync(OUT_AB, 60, 0);
+  Wait(3000);
+  Off(OUT_AB);
 }
 
-void goBackward(char pwr, unsigned sec) {
-    OnFwdSync(OUT_AB, pwr);
-    Wait(sec);
-    Off(OUT_AB);
+void GoFoward(byte power, byte seconds) {
+     OnFwdSync(OUT_AB, power, 0);
+     Wait(seconds*1000);
+     Off(OUT_AB);
 }
 
-// must be "clockWise" or "counterClockWise"
-//             0                  1
-// deg is how many degress it'll turn
-void turnAround(byte direction, byte deg) {
-    if(direction) {
-        OnFwd(OUT_B, 20);
-        Until(MotorTachoCount(OUT_B) < deg);
-        Off(OUT_B);
-    } else {
-        OnFwd(OUT_A, 20);
-        Until(MotorTachoCount(OUT_A) < deg);
-        Off(OUT_A);
-    }
+void GoBackward(byte power, byte seconds) {
+     OnRevSync(OUT_AB, power, 0);
+     Wait(seconds*1000);
+     Off(OUT_AB);
 }
 
 // configura os sensores com base
@@ -44,8 +46,3 @@ void grab() {}
 
 void drop() {}
 
-task main() {
-    configSensors();
-    goFoward(50, 3000);
-    turnAround(0, 90);
-}

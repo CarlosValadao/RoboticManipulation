@@ -5,18 +5,34 @@
 // Sensor ultrassonico -> porta 4
 
 //void GoFoward(char pwr, unsgined sec);
+// Gira no sentido da roda que ta girando para
+// frente
+
+#define TRACK 0
+#define WHEEL_DIAMETER 0
+#define DEFAULT_MOTOR_POWER 50
+#define CLOCKWISE 0
+#define COUNTERCLOCKWISE 1
 
 void GoFoward(byte power, byte seconds);
 void GoBackward(byte power, byte seconds);
+// Utilizara os defines, para melhor conveniencia
+void TurnAround(byte direction, byte degrees);
 void configSensors();
 void grab();
 void drop();
 
 task main() {
-  OnFwdSync(OUT_AB, 60, 0);
-  Wait(3000);
-  Off(OUT_AB);
-  OnRevSync(OUT_AB, 60, 0);
+  //OnFwdSync(OUT_AB, 60, 0);
+  //Wait(3000);
+  //Wait(5000);
+  //Off(OUT_AB);
+  //OnRevSync(OUT_AB, 60, 0);
+  //Wait(5000);
+  //Off(OUT_AB);
+  //TurnAround(CLOCKWISE, 45);
+  OnFwd(OUT_A, 50);
+  OnRev(OUT_B, 50);
   Wait(3000);
   Off(OUT_AB);
 }
@@ -31,6 +47,35 @@ void GoBackward(byte power, byte seconds) {
      OnRevSync(OUT_AB, power, 0);
      Wait(seconds*1000);
      Off(OUT_AB);
+}
+
+// inputs
+// -> direction must be
+//      clockwise      counterclockwise
+//          0                 1
+//       CLOCKWISE     COUNTERCLOCKWISE
+// -> degrees - how many degress it'll turn
+void TurnAround(byte direction, byte degrees) {
+     float trackCircunference, wheelCircunference;
+     float distancePerDeg, distance2turn;
+     long tachos2turn;
+     trackCircunference = TRACK*PI;
+     distancePerDeg = trackCircunference/360;
+     distance2turn = distancePerDeg*degrees;
+     wheelCircunference = WHEEL_DIAMETER*PI;
+     tachos2turn = (distance2turn/wheelCircunference)/360;
+     // left motor must go foward
+     //OUT_A
+     if (direction) {
+        RotateMotor(OUT_A, DEFAULT_MOTOR_POWER, tachos2turn);
+        RotateMotor(OUT_B, -DEFAULT_MOTOR_POWER, tachos2turn);
+     }
+     // right motor must go foward
+     // OUT_B
+     else {
+        RotateMotor(OUT_B, DEFAULT_MOTOR_POWER, tachos2turn);
+        RotateMotor(OUT_A, -DEFAULT_MOTOR_POWER, tachos2turn);
+     }
 }
 
 // configura os sensores com base

@@ -1,0 +1,107 @@
+/*
+O robô tem que começar virado para o norte
+*/
+
+/*
+==============================================
+    BLOCO DE IMPORTAÇÕES DE CÓDIGOS AUXILIARES
+==============================================
+*/
+#include "foo.h"
+
+
+/*
+==============================================
+        BLOCO DE CONSTANTES DO SISTEMA
+==============================================
+*/
+#define RAIO_RODA 10 // cm
+#define COMPRIMENTO_ROBO 10 // cm
+#define LARGURA_ROBO 10 // cm
+
+
+/*
+==============================================
+        BLOCO DE ESTRUTURAS AUXILIARES
+==============================================
+*/
+struct car
+{
+  string car_type;
+  int manu_year;
+  bool  myVector[] = {true, false, false, false};// NORTE - SUL - LESTE - OESTE
+};
+
+
+/* 
+==============================================
+        BLOCO DE LÓGICA DE ALTO NÍVEL
+- sem dependências de detalhes de estrutura e etc 
+==============================================
+*/
+
+void encontrar_entrada_base(){
+    
+}
+
+void encontrar_saida_base(){
+
+}
+
+
+void encontrar_entrada_estoque(){
+    
+}
+
+void encontrar_saida_estoque(){
+
+}
+
+
+void encontrar_estacao_trabalho(){
+
+}
+
+void procurar_caixa(){
+
+}
+
+void pegar_caixa(){
+
+}
+
+void deixar_caixa(){
+
+}
+// --------------------------------------
+// O grau é relativo a orientação atual do robô
+void girar(byte graus){
+
+}
+
+
+
+task main(){
+
+
+}
+
+
+
+
+/* AQUI VAI ESTAR EM OUTRO ARQUIVO 
+==============================================
+        BLOCO DE LÓGICA DE BAIXO NÍVEL
+==============================================
+*/
+float calcular_deslocamento(byte angulo_motor_antes, byte angulo_motor_depois){
+
+}
+
+void virar_esquerda(){
+
+}
+
+void virar_direita(){
+
+}

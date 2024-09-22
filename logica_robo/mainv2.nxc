@@ -29,7 +29,7 @@ robot.disponivel_base = true;
 /* Calcula o quanto o robô se deslocou em uma reta durante um intervalo de tempo
 */
 float calcular_deslocamento(){
-	Acquire(Robot.robotMutex);
+	Acquire(robot.robotMutex);
 	// Só faz a conta se o robô não estiver girando, pois girar no próprio eixo não resulta em deslocamento 
 	if (! robot.em_rotacao){
 		grau_atual = MotorRotationCount(MOTOR_A);
@@ -37,7 +37,7 @@ float calcular_deslocamento(){
 		float deslocamento = 2*PI*RAIO_RODA*(delta_angulo)/360;
 		robot.grau_anterior = grau_atual;
 	}
-	Release(Robot.robotMutex);
+	Release(robot.robotMutex);
 	Wait(MS_200);// um sleep que deverá estar na task (LEMBRAR DE COLOCAR NA TASK/THREAD)
 	return deslocamento;
 }

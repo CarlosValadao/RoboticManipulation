@@ -21,8 +21,8 @@ struct Robot {
 Robot robot;
 robot.em_rotacao = false;
 robot.grau_anterior = MotorRotationCount(MOTOR_A);
-robot.vetor_deslocamento = {0, 0};
-robot.orientacao = {true, false, false, false};
+robot.vetor_deslocamento = {0, 0};//?
+robot.orientacao = {true, false, false, false};//?
 robot.disponivel_base = true;
 
 
@@ -30,34 +30,42 @@ robot.disponivel_base = true;
 */
 float calcular_deslocamento(){
 	Acquire(robot.robotMutex);
+	float deslocamento = 0;
 	// Só faz a conta se o robô não estiver girando, pois girar no próprio eixo não resulta em deslocamento 
 	if (! robot.em_rotacao){
 		grau_atual = MotorRotationCount(MOTOR_A);
 		delta_angulo = grau_atual - robot.grau_anterior;
-		float deslocamento = 2*PI*RAIO_RODA*(delta_angulo)/360;
+		deslocamento = 2*PI*RAIO_RODA*(delta_angulo)/360;
 		robot.grau_anterior = grau_atual;
 	}
 	Release(robot.robotMutex);
-	Wait(MS_200);// um sleep que deverá estar na task (LEMBRAR DE COLOCAR NA TASK/THREAD)
+
 	return deslocamento;
 }
 
 
-void registrar_deslocamento(float distancia_percorrida){
-	Acquire(Robot.robotMutex);
+void registrar_deslocamento(float distancia_percorrida, Robot robot){
+	Acquire(robot.robotMutex);
 	// Se o robô andou para o norte
 	if (robot.orientacao[0]){
-		vetor_deslocamento[1] = vetor_deslocamento[1] + distancia_percorrida;
+		robot.vetor_deslocamento[1] = robot.vetor_deslocamento[1] + distancia_percorrida;
 	} else if(robot.orientacao[1]){ // Se o robô andou para o sul
-		vetor_deslocamento[1] = vetor_deslocamento[1] - distancia_percorrida;
+		robot.vetor_deslocamento[1] = robot.vetor_deslocamento[1] - distancia_percorrida;
 	} else if(robot.orientacao[2]) {// Se o robô andou para leste
-		vetor_deslocamento[0] = vetor_deslocamento[0] + distancia_percorrida;
+		robot.vetor_deslocamento[0] = robot.vetor_deslocamento[0] + distancia_percorrida;
 	} else{ // Se o robô andou para o oetse orientacao[3]
-		vetor_deslocamento[0] = vetor_deslocamento[0] - distancia_percorrida;
+		robot.vetor_deslocamento[0] = robot.vetor_deslocamento[0] - distancia_percorrida;
 	}
-	Release(Robot.robotMutex);
+	Release(robot.robotMutex);
 }
 
-task main(){
 
+// DEVE RECEBER  O robot SCTRUCTURE POR REFERENCIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! (ASSIM COMO TODAS AS THREADS)
+task T_ODOMETRIA(){
+	float deslocamento;
+	while(True){
+		deslocamento = calcular_deslocamento();
+		registrar_deslocamento(deslocamento, robot);
+		Wait(MS_200);// um sleep que deverá estar na task (LEMBRAR DE COLOCAR NA TASK/THREAD)
+	}
 }

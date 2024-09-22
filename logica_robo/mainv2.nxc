@@ -1,0 +1,63 @@
+#define DISTANCIA_ENTRE_RODAS 10 // cm
+#define RAIO_RODA 10 // cm
+#define MOTOR_A OUT_A
+#define MOTOR_B OUT_B
+
+struct Robot {
+	// Indica se o robô está disponivel na base
+	bool disponivel_base = true;// começa na base
+	// Vetor que diz a orientação atual do robô (começa virado para o norte)
+	bool orientacao[] = {true, false, false, false};// NORTE - SUL - LESTE - OESTE
+	// Vetor deslocamento do robô
+	// O referencial (X,Y) é relativo a posição inicial, que deverá ser na fita especificada
+	float vetor_deslocamento[] = {0, 0};//Indica o deslocamento em torno de X e Y respectivamente
+	mutex robotMutex;// mutex para alterar os estados do robô
+	long grau_anterior;// = MotorRotationCount(MOTOR_A);
+	bool em_rotacao;// = false;
+};
+
+
+// Inicializando parametros do robo
+Robot robot;
+robot.em_rotacao = false;
+robot.grau_anterior = MotorRotationCount(MOTOR_A);
+robot.vetor_deslocamento = {0, 0};
+robot.orientacao = {true, false, false, false};
+robot.disponivel_base = true;
+
+
+/* Calcula o quanto o robô se deslocou em uma reta durante um intervalo de tempo
+*/
+float calcular_deslocamento(){
+	Acquire(Robot.robotMutex);
+	// Só faz a conta se o robô não estiver girando, pois girar no próprio eixo não resulta em deslocamento 
+	if (! robot.em_rotacao){
+		grau_atual = MotorRotationCount(MOTOR_A);
+		delta_angulo = grau_atual - robot.grau_anterior;
+		float deslocamento = 2*PI*RAIO_RODA*(delta_angulo)/360;
+		robot.grau_anterior = grau_atual;
+	}
+	Release(Robot.robotMutex);
+	Wait(MS_200);// um sleep que deverá estar na task (LEMBRAR DE COLOCAR NA TASK/THREAD)
+	return deslocamento;
+}
+
+
+void registrar_deslocamento(float distancia_percorrida){
+	Acquire(Robot.robotMutex);
+	// Se o robô andou para o norte
+	if (robot.orientacao[0]){
+		vetor_deslocamento[1] = vetor_deslocamento[1] + distancia_percorrida;
+	} else if(robot.orientacao[1]){ // Se o robô andou para o sul
+		vetor_deslocamento[1] = vetor_deslocamento[1] - distancia_percorrida;
+	} else if(robot.orientacao[2]) {// Se o robô andou para leste
+		vetor_deslocamento[0] = vetor_deslocamento[0] + distancia_percorrida;
+	} else{ // Se o robô andou para o oetse orientacao[3]
+		vetor_deslocamento[0] = vetor_deslocamento[0] - distancia_percorrida;
+	}
+	Release(Robot.robotMutex);
+}
+
+task main(){
+
+}

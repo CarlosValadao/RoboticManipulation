@@ -9,7 +9,15 @@
 // Gira no sentido da roda que ta girando para
 // frente
 
-#define TRACK 14.8
+#define LEFT_MOTOR  OUT_A
+#define RIGHT_MOTOR OUT_B
+#define CLAW        OUT_C
+#define BOTH_MOTORS OUT_AB
+#define ULTRASONIC  S2
+#define TOUCH       S3
+#define LIGHT       S2
+
+#define TRACK 18
 #define WHEEL_DIAMETER 5.6
 #define DEFAULT_MOTOR_POWER 50
 #define CLOCKWISE 0
@@ -22,6 +30,8 @@ void TurnAround(byte direction, byte degrees);
 void configSensors();
 void grab();
 void drop();
+void getMailboxMessage(byte mailboxIdx);
+float inch2cm(byte inch);
 
 task main() {
   //OnFwdSync(OUT_AB, 60, 0);
@@ -36,7 +46,20 @@ task main() {
   //OnRev(OUT_B, 50);
   //Wait(3000);
   //Off(OUT_AB);
-  TurnAround(COUNTERCLOCKWISE, 140);
+  //TurnAround(COUNTERCLOCKWISE, 90);
+  //grab();
+  //grab();
+  configSensors();
+  OnFwdSync(BOTH_MOTORS, 40, 0);
+  until(SENSOR_3 == 1);
+  Off(BOTH_MOTORS);
+}
+
+// use, by default mailbox 1
+// read a mailbox and show it
+// on NXT display
+task readMailBox() {
+     MessageHasArrieved(1);
 }
 
 void GoFoward(byte power, byte seconds) {
@@ -85,12 +108,25 @@ void TurnAround(byte direction, byte degrees) {
 // no comentario feito no inicio
 // do arquivo
 void configSensors() {
-    SetSensorTouch(S1);
-    SetSensorUltrasonic(S4);
-    //SetSensorLight();
+    SetSensorTouch(TOUCH);
+    SetSensorUltrasonic(ULTRASONIC);
+    SetSensorLight(LIGHT);
 }
 
-void grab() {}
+//fwd
+// turn the motor connected in the CLAW
+// over 90 deg
+void grab() {
+   RotateMotor(CLAW, 15, 90);
+}
 
-void drop() {}
+// rev
+// turn the motor connected in the CLAW
+// over -90 deg
+void drop() {
+   RotateMotor(CLAW, 15, -90);
+}
 
+void getMailboxMessage(byte mailboxIdx) {}
+
+float inch2cm(byte inch) {}

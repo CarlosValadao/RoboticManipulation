@@ -1,8 +1,9 @@
 // Motor roda direita ->  porta A
 // Motor roda esquerda -> porta B
 // Motor Garra ->         porta C
-// Sensor de toque ->     porta 1
-// Sensor ultrassonico -> porta 4
+// Sensor de toque ->     porta 3
+// Sensor ultrassonico -> porta 2
+// Sensor de Luz       -> porta 4
 
 //void GoFoward(char pwr, unsgined sec);
 // Gira no sentido da roda que ta girando para

@@ -14,6 +14,7 @@ mymotor = nxt_brick.get_motor(nxt.motor.Port.A)
 mymotor.turn(25, 360)
 # Full circle in the opposite direction.
 mymotor.turn(-25, 360)
+nxt_brick.message_write(1, MESSAGE)
 #nxt_brick.message_write(inbox=1, message=MESSAGE)
 #message = nxt_brick.message_read(1, True)
 #print(f'MENSAGEM LIDA DO MAILBOX 1 DO NXT {message}')

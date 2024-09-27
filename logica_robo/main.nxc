@@ -1,21 +1,23 @@
-// Motor roda direita ->  porta A
-// Motor roda esquerda -> porta B
-// Motor Garra ->         porta C
-// Sensor de toque ->     porta 3
-// Sensor ultrassonico -> porta 2
-// Sensor de Luz       -> porta 4
+// Right Motor        -> port A
+// Left  Motor        -> port B
+// Claw               -> port C
+// Touch Sensor       -> port 3
+// Ultrasonic Sensor  -> port 2
+// Light Sensor       -> port 4
 
-//void GoFoward(char pwr, unsgined sec);
-// Gira no sentido da roda que ta girando para
-// frente
+#include "BLUETOOTH.h"
 
 #define LEFT_MOTOR  OUT_A
 #define RIGHT_MOTOR OUT_B
 #define CLAW        OUT_C
 #define BOTH_MOTORS OUT_AB
-#define ULTRASONIC  S2
-#define TOUCH       S3
-#define LIGHT       S2
+
+#define ULTRASONIC_SENSOR  S2
+#define TOUCH_SENSOR       S3
+#define LIGHT_SENSOR       S2
+
+#define TOUCH_SENSOR_STATE SENSOR_3
+#define LIGHT_SENSOR_STATE SENSOR_2
 
 #define TRACK 18
 #define WHEEL_DIAMETER 5.6
@@ -25,41 +27,29 @@
 
 void GoFoward(byte power, byte seconds);
 void GoBackward(byte power, byte seconds);
-// Utilizara os defines, para melhor conveniencia
+// use defines
 void TurnAround(byte direction, byte degrees);
 void configSensors();
 void grab();
 void drop();
 void getMailboxMessage(byte mailboxIdx);
-float inch2cm(byte inch);
-
-task main() {
-  //OnFwdSync(OUT_AB, 60, 0);
-  //Wait(3000);
-  //Wait(5000);
-  //Off(OUT_AB);
-  //OnRevSync(OUT_AB, 60, 0);
-  //Wait(5000);
-  //Off(OUT_AB);
-  //TurnAround(CLOCKWISE, 45);
-  //OnFwd(OUT_A, 50);
-  //OnRev(OUT_B, 50);
-  //Wait(3000);
-  //Off(OUT_AB);
-  //TurnAround(COUNTERCLOCKWISE, 90);
-  //grab();
-  //grab();
-  configSensors();
-  OnFwdSync(BOTH_MOTORS, 40, 0);
-  until(SENSOR_3 == 1);
-  Off(BOTH_MOTORS);
-}
+byte robotDistance(byte port);
 
 // use, by default mailbox 1
 // read a mailbox and show it
 // on NXT display
-task readMailBox() {
-     MessageHasArrieved(1);
+task readMailbox() {
+     string in;
+     in = bluetoothSlaveGet();
+     TextOut(0, LCD_LINE1, in);
+}
+
+task main() {
+  configSensors();
+  StartTask(readMailbox);
+  OnFwdSync(BOTH_MOTORS, 40, 0);
+  until(TOUCH_SENSOR_STATE == 1);
+  Off(BOTH_MOTORS);
 }
 
 void GoFoward(byte power, byte seconds) {
@@ -104,13 +94,12 @@ void TurnAround(byte direction, byte degrees) {
      }
 }
 
-// configura os sensores com base
-// no comentario feito no inicio
-// do arquivo
+// set up the sensors connected
+// to NXT, following init description
 void configSensors() {
-    SetSensorTouch(TOUCH);
-    SetSensorUltrasonic(ULTRASONIC);
-    SetSensorLight(LIGHT);
+    SetSensorTouch(TOUCH_SENSOR);
+    SetSensorUltrasonic(ULTRASONIC_SENSOR);
+    SetSensorLight(LIGHT_SENSOR);
 }
 
 //fwd
@@ -129,4 +118,8 @@ void drop() {
 
 void getMailboxMessage(byte mailboxIdx) {}
 
-float inch2cm(byte inch) {}
+// read and return the robot
+// distance to any object
+byte robotDistance(byte port) {
+     return SensorUS(port);
+}

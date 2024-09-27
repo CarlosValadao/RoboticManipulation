@@ -44,12 +44,31 @@ task readMailbox() {
      TextOut(0, LCD_LINE1, in);
 }
 
-task main() {
-  configSensors();
-  StartTask(readMailbox);
-  OnFwdSync(BOTH_MOTORS, 40, 0);
-  until(TOUCH_SENSOR_STATE == 1);
-  Off(BOTH_MOTORS);
+//task main() {
+//  configSensors();
+//  StartTask(readMailbox);
+//  OnFwdSync(BOTH_MOTORS, 40, 0);
+//  until(TOUCH_SENSOR_STATE == 1);
+//  Off(BOTH_MOTORS);
+//}
+
+task main ()
+{
+    string in, out;
+    while (true)
+     {
+        if (ReceiveMessage(1, true, in) == NO_ERR)
+          {
+            out = StrCat("Hello ", in);
+            TextOut (0, LCD_LINE1, out, true);
+            SendMessage (10, out);
+          }
+        else 
+          {
+            TextOut(0, LCD_LINE1, "OPA!");
+            NumOut(0, LCD_LINE3, 10);
+          }
+      }
 }
 
 void GoFoward(byte power, byte seconds) {

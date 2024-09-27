@@ -34,6 +34,8 @@ void grab();
 void drop();
 void getMailboxMessage(byte mailboxIdx);
 byte robotDistance(byte port);
+char sendMessage(string message);
+
 
 // use, by default mailbox 1
 // read a mailbox and show it
@@ -43,6 +45,18 @@ task readMailbox() {
      in = bluetoothSlaveGet();
      TextOut(0, LCD_LINE1, in);
 }
+
+// send to supervisor all the
+// necessary informations
+// right and left motors information
+// at all and etcetera
+task sendRobotInfo() {
+    string message;
+    while (true)
+          message = NumToStr(10);
+          sendMessage(message);
+}
+
 
 //task main() {
 //  configSensors();
@@ -69,6 +83,7 @@ task main ()
             NumOut(0, LCD_LINE3, 10);
           }
       }
+      
 }
 
 void GoFoward(byte power, byte seconds) {
@@ -141,4 +156,8 @@ void getMailboxMessage(byte mailboxIdx) {}
 // distance to any object
 byte robotDistance(byte port) {
      return SensorUS(port);
+}
+
+char sendMessage(string message) {
+     return SendMessage(MAILBOX10, message);
 }

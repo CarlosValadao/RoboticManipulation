@@ -1,0 +1,62 @@
+#define DISTANCIA_ENTRE_RODAS 18
+#define DISTANCIA_RODA_CENTRO 9
+#define DIAMETRO_RODA 5.6 // cm
+#define MOTOR_E OUT_A // Motor da esquerda
+#define MOTOR_D OUT_B // Mootor da direita
+#define MOTOR_ED OUT_AB
+
+//// https://github.com/nloomans/nxc-linux-setup
+
+void girar_esq_while(){
+    // Calcula para 90 graus
+    float grau = (DISTANCIA_RODA_CENTRO*360)/((DIAMETRO_RODA/2)*8);
+    while(abs(MotorRotationCount(MOTOR_D)) < grau){
+        OnFwdSync(MOTOR_D, 20, -100);
+    }
+    Off(MOTOR_ED);
+}
+
+
+// Testar os diferentes valores de wait e os coeficientes do pid como 50, 50, 50
+void girar_esq_pid(){
+    // Calcula para 90 graus
+    float grau = (DISTANCIA_RODA_CENTRO*360)/((DIAMETRO_RODA/2)*8);
+    RotateMotorExPID(OUT_AB, 20, 90, -100, true, true, 40, 40, 90);	
+}
+
+void girar_esq_normal(){
+    // Calcula para 90 graus
+    float grau = (DISTANCIA_RODA_CENTRO*360)/((DIAMETRO_RODA/2)*8);
+    RotateMotorEx(MOTOR_ED, 20, grau, -100, true, true);
+}
+
+
+
+
+
+
+
+task main(){
+    
+}
+
+
+
+//////////////////// TESTAR COM PID
+
+//RotateMotorExPID(OUT_AB, 25, 90, -100, true, true, 40, 40, 90);	
+
+/*
+task main(){
+    float gearRatio = 1;
+
+    float targetDegrees = ( 2 * DIST_CENTRO_RODA * PI ) / RAIO_RODA* gearRatio * GRAU_CURVA;
+    float targetDegrees = ( 2 * DIST_CENTRO_RODA * PI ) / (RAIO_RODA* gearRatio * GRAU_CURVA);
+
+    while(MotorRotationCount(OUT_A)< targetDegrees){
+        OnFwdSync(OUT_AB, 25, -100);
+    }
+    
+}
+
+*/

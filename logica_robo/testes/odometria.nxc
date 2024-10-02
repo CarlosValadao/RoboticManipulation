@@ -1,0 +1,82 @@
+#define DISTANCIA_RODA_CENTRO 14.8
+#define DIAMETRO_RODA 5.6 // cm
+#define MOTOR_E OUT_A // Motor da esquerda
+#define MOTOR_D OUT_B // Mootor da direita
+#define MOTOR_ED OUT_AB
+#define POTENCIA_MOTOR 25
+
+
+enum REGIAO { BASE, BANCADA, PATIO, ESTOQUE };// PATIO é a região onde tem várias bancadas
+
+struct Robot {
+	// Indica se o robô está disponivel na base
+	bool disponivel_base;// começa na base
+	REGIAO regiao;
+	// Vetor que diz a orientação atual do robô (começa virado para o norte)
+	bool orientacao[4];// NORTE - OESTE - SUL - LESTE
+	// Vetor deslocamento do robô
+	// O referencial (X,Y) é relativo a posição inicial, que deverá ser na fita especificada
+	float vetor_deslocamento[2];// = {0, 0};//Indica o deslocamento em torno de X e Y respectivamente
+	mutex roboMutex;// mutex para alterar os estados do robô
+	long grau_anterior;// = MotorRotationCount(MOTOR_A);
+	bool em_rotacao;// = false;
+};
+
+
+
+
+
+
+task main(){
+// INICIALIZANDO A ESTRUTURA DO ROBÔ
+Robot robo;
+robo.disponivel_base = true;// começa na base
+robo.regiao = BASE;// começa na base
+//
+robo.orientacao[0] = true;// Começa voltado pro norte do mapa
+robo.orientacao[0] = false;
+robo.orientacao[0] = false;
+robo.orientacao[0] = false;
+//
+robo.vetor_deslocamento[0] = 0;
+robo.vetor_deslocamento[0] = 1;
+//
+robo.grau_anterior = 0;
+robo.em_rotacao = false;
+
+Acquire(robo.roboMutex);
+
+
+// INICIALIZA TODAS AS OUTRAS TASK AQUI
+
+}
+
+
+//=========================================================================================================================
+void girar_esq_normal(Robot robo){
+    // Calcula para 90 graus
+    float grau = (DISTANCIA_RODA_CENTRO*360)/((DIAMETRO_RODA/2)*8);
+    // Trava o mutex
+    Acquire(robo.roboMutex);
+    RotateMotorEx(MOTOR_ED, 20, grau, -100, true, true);
+    if (robo.orientacao[0]==true){// Se estiver para o NORTE
+       // vai pro oeste
+       robo.orientacao[0]=false;
+       robo.orientacao[1]=true;
+    } else if (robo.orientacao[1]==true){// Se estiver para o OESTE
+       // vai pro sul
+       robo.orientacao[1]=false;
+       robo.orientacao[2]=true;
+    } else if (robo.orientacao[2]==true){// Se estiver para o SUL
+       // vai pro leste
+       robo.orientacao[2]=false;
+       robo.orientacao[3]=true;
+    }
+    else if (robo.orientacao[3]==true){// Se estiver para o LESTE
+       // vai pro norte
+       robo.orientacao[3]=false;
+       robo.orientacao[0]=true;
+    }
+    Release(robo.roboMutex);
+    Wait(MS_200);
+}

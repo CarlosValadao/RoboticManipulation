@@ -1,0 +1,185 @@
+#define DISTANCIA_ENTRE_RODAS 14.8
+#define RAIO_RODA 5.6 // cm
+#define MOTOR_E OUT_A // Motor da esquerda
+#define MOTOR_D OUT_B // Mootor da direita
+#define MOTOR_ED OUT_AB
+
+//// https://github.com/nloomans/nxc-linux-setup
+
+
+void girar_90_esq(){
+    byte grau = (DISTANCIA_ENTRE_RODAS*360)/(RAIO_RODA*8);
+    // Pq 0 ou 10https://github.com/nloomans/nxc-linux-setup0?
+    RotateMotorEx(MOTOR_ED, 40, grau, 100, true, true);
+}
+
+void girar_90_dir(){
+    byte grau = (DISTANCIA_ENTRE_RODAS*360)/(RAIO_RODA*8);
+    // Pq 0 ou 100?
+    RotateMotorEx(MOTOR_ED, 40, grau, -100, true, true);
+}
+
+// Testar os diferentes valores de wait e os coeficientes do pid como 50, 50, 50
+// O bom do PID seria não dar o tranco que dá ao ligar o motor, mas talvez n seja necessário se estiver sincronizado
+
+
+void girar_90_esq_V2(){
+    byte grau = (DISTANCIA_ENTRE_RODAS*360)/(RAIO_RODA*8);
+    RotateMotorPID(MOTOR_E, -40, grau, 40, 40, 90);
+    RotateMotorPID(MOTOR_D, 40, grau, 40, 40, 90);
+    Wait(3000);// Testar mudando esses valores aqui e ver oq acontece
+    Off(MOTOR_ED);
+}
+
+void girar_90_dir_V2(){
+    byte grau = (DISTANCIA_ENTRE_RODAS*360)/(RAIO_RODA*8);
+    RotateMotorPID(MOTOR_E, 40, grau, 40, 40, 90);
+    RotateMotorPID(MOTOR_D, -40, grau, 40, 40, 90);
+    Wait(3000);// Testar mudando esses valores aqui e ver oq acontece
+    Off(MOTOR_ED);
+}
+
+task main(){
+
+}
+
+
+
+////////////////////////////////////////////////////////////// TESTE 2 (VER OS RPM PARA CADA POTENCIA DO MOTOR -- BOTAR O MOTOR NO AR E NO CHÃO E VER SE MUDA A RPM PARA A MESMA POTENCIA)
+// Display RPM of motor attached to the port MOTOR while running at full speed.
+// The program runs continously until stopped by pressing the gray NXT button.
+// Requires NXT firmware 1.28 or later (uses floating point arithmetic).
+// CurrentTick returns milliseconds in a long integer.
+// MotorRotationCount returns degrees in a long integer.
+#define MOTOR OUT_A
+#define FULL_SPEED 100
+#define DEG_TO_RPM 166.6667 // converts degrees per millisecond to RPM
+long prev_tick;
+long prev_deg = 0;
+string rpm_msg()
+{
+   long dt = CurrentTick() - prev_tick;
+   long deg = MotorRotationCount(MOTOR) - prev_deg;
+   float rpm = deg * DEG_TO_RPM / dt;
+   prev_deg = MotorRotationCount(MOTOR);
+   prev_tick = CurrentTick();
+   return FormatNum("RPM: %5.1f", rpm);
+}
+task main()
+{
+   prev_tick = CurrentTick();
+   OnFwd(MOTOR, FULL_SPEED);
+   while (true)
+   {
+      Wait(MS_500); // update display every 0.5 seconds
+      TextOut(0, LCD_LINE2, rpm_msg(), true);
+   }
+}
+
+
+
+////////////////////////////////////////////////////////////// TESTE 1 (VER OQ É ESSE TACHO)
+task main(){
+    
+   while (true)
+   {
+        x = MotorTachoCount(OUT_A);
+      Wait(MS_500); // update display every 0.5 seconds
+      TextOut(0, LCD_LINE2, x, true);
+   }
+}
+
+
+
+
+///////////////////////  VER OQ É O TURNRATIO
+task main(){
+    
+
+    while (true)
+   {
+    x = MotorTurnRatio(OUT_A);
+      Wait(MS_500); // update display every 0.5 seconds
+      TextOut(0, LCD_LINE2, x, true);
+   }
+}
+
+
+
+///////////////////////////////////// VER SE FUNCIONA ISSO -- TESTAR UMA EQUAÇÃO PRIMEIRO E DEPOIS A OUTRA
+
+
+task main(){
+    float gearRatio = 1;
+
+    float targetDegrees = ( 2 * DIST_CENTRO_RODA * PI ) / RAIO_RODA* gearRatio * GRAU_CURVA;
+    float targetDegrees = ( 2 * DIST_CENTRO_RODA * PI ) / (RAIO_RODA* gearRatio * GRAU_CURVA);
+
+    while(MotorRotationCount(OUT_A)< targetDegrees){
+        OnFwdSync(OUT_AB, 25, -100);
+    }
+    
+}
+
+
+
+//////////////////// TESTAR COM PID
+
+RotateMotorExPID(OUT_AB, 25, 90, -100, true, true, 40, 40, 90);	
+
+
+
+
+//////// FAZER O ROBO IR PARA FRENTE X GRAUS E VÊ SE ELE VAI DESLOCAR OQ A CONTA DIZ
+// POSSO USAR ESSE PARA FAZER CURVA TAMBÉM, AGR EM FUNÇÃO DO TEMPO-- DEIXO ELA ATIVADA POR X TEMPOS
+void OnFwdSyncPID	(	byte 	outputs,
+char 	pwr,
+char 	turnpct,
+byte 	p,
+byte 	i,
+byte 	d 
+)		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+
+
+
+void PosRegAddAngle	(	byte 	output,
+long 	angle_add 
+)		
+inline
+Add to the current value for set angle.
+
+Add an offset to the current set position. Returns immediately, but keep regulating.
+
+Warning
+This function requires the enhanced NBC/NXC firmware version 1.31+
+Parameters
+output	Desired output port. Can be a constant or a variable, see Output port constants.
+angle_add	Value to add to the current set position, in degree. Can be negative. Can be greater than 360 degree to make several turns.
+Examples:
+ex_PosReg.nxc.
+
+*/

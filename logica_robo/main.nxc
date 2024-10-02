@@ -5,16 +5,33 @@
 // Ultrasonic Sensor  -> port 2
 // Light Sensor       -> port 4
 
+// By default
+// receive on MAILBOX1
+// send on MAILBOX10
+
+// black color range on light sensor
+
+// silver color range on light sensor
+
 #include "BLUETOOTH.h"
+
+// PROTOCOL CONSTANTS
+#define REQUEST  1
+#define RESPONSE 2
+#define POSITION 3
+#define ACTIVATE 10
+#define STATUS   11
+
+#define wait(seconds); Wait(seconds*1000);
 
 #define LEFT_MOTOR  OUT_A
 #define RIGHT_MOTOR OUT_B
 #define CLAW        OUT_C
 #define BOTH_MOTORS OUT_AB
 
-#define ULTRASONIC_SENSOR  S2
-#define TOUCH_SENSOR       S3
-#define LIGHT_SENSOR       S2
+#define ULTRASONIC_SENSOR  IN_2
+#define TOUCH_SENSOR       IN_3
+#define LIGHT_SENSOR       IN_4
 
 #define TOUCH_SENSOR_STATE SENSOR_3
 #define LIGHT_SENSOR_STATE SENSOR_2
@@ -22,20 +39,22 @@
 #define TRACK 18
 #define WHEEL_DIAMETER 5.6
 #define DEFAULT_MOTOR_POWER 50
+#define DEFAULT_CLAW_POWER  15
 #define CLOCKWISE 0
 #define COUNTERCLOCKWISE 1
 
 void GoFoward(byte power, byte seconds);
 void GoBackward(byte power, byte seconds);
-// use defines
-void TurnAround(byte direction, byte degrees);
 void configSensors();
 void grab();
 void drop();
-void getMailboxMessage(byte mailboxIdx);
-byte robotDistance(byte port);
+bool getMailboxMessage(string &message);
+byte getRobotDistance(byte port);
+bool isTouched();
 char sendMessage(string message);
-
+byte getLightReflection();
+bool readSupervisorMessage();
+void protocolMessageParser();
 
 // use, by default mailbox 1
 // read a mailbox and show it
@@ -57,75 +76,55 @@ task sendRobotInfo() {
           sendMessage(message);
 }
 
-
-//task main() {
-//  configSensors();
-//  StartTask(readMailbox);
-//  OnFwdSync(BOTH_MOTORS, 40, 0);
-//  until(TOUCH_SENSOR_STATE == 1);
-//  Off(BOTH_MOTORS);
-//}
+// global variable
+// looks like a mutex
+// for robot
+bool isRobotBusy = false;
 
 task main ()
 {
+    byte distance;
+    configSensors();
+    StartTask(sendRobotInfo);
+    string message = "";
     string in, out;
     while (true)
      {
         if (ReceiveMessage(1, true, in) == NO_ERR)
           {
             out = StrCat("Hello ", in);
+            if (!strcmp(in, "vaemfrente")) {
+               OnFwdSync(OUT_AB, 30, 0);
+               Wait(3000);
+               Off(OUT_A);
+            }
             TextOut (0, LCD_LINE1, out, true);
             SendMessage (10, out);
           }
         else 
           {
+            distance = getRobotDistance(IN_2);
             TextOut(0, LCD_LINE1, "OPA!");
             NumOut(0, LCD_LINE3, 10);
+            NumOut(0, LCD_LINE5, distance);
+            NumOut(0, LCD_LINE7, Sensor(S3));
+            NumOut(0, LCD_LINE8, Sensor(S4));
+            Wait(1000);
+            ClearScreen();
           }
       }
-      
 }
 
 void GoFoward(byte power, byte seconds) {
      OnFwdSync(OUT_AB, power, 0);
-     Wait(seconds*1000);
+     wait(seconds);
      Off(OUT_AB);
 }
 
 void GoBackward(byte power, byte seconds) {
      OnRevSync(OUT_AB, power, 0);
-     Wait(seconds*1000);
+     wait(seconds);
      Off(OUT_AB);
-}
-
-// inputs
-// -> direction must be
-//      clockwise      counterclockwise
-//          0                 1
-//       CLOCKWISE     COUNTERCLOCKWISE
-// -> degrees - how many degress it'll turn
-void TurnAround(byte direction, byte degrees) {
-     float trackCircunference, wheelCircunference;
-     float distancePerDeg, distance2turn;
-     long tachos2turn;
-     trackCircunference = TRACK*PI;
-     distancePerDeg = trackCircunference/360;
-     distance2turn = distancePerDeg*degrees;
-     wheelCircunference = WHEEL_DIAMETER*PI;
-     tachos2turn = (distance2turn/wheelCircunference)*360;
-     // left motor must go foward
-     //OUT_A
-     if (direction) {
-        //RotateMotor(OUT_A, DEFAULT_MOTOR_POWER, tachos2turn);
-        //RotateMotor(OUT_B, -DEFAULT_MOTOR_POWER, tachos2turn);
-        RotateMotorEx(OUT_AB, DEFAULT_MOTOR_POWER, tachos2turn, 100, true, true);
-     }
-     // right motor must go foward
-     // OUT_B
-     else {
-        //RotateMotor(OUT_B, DEFAULT_MOTOR_POWER, tachos2turn);
-        //RotateMotor(OUT_A, -DEFAULT_MOTOR_POWER, tachos2turn);
-     }
 }
 
 // set up the sensors connected
@@ -140,24 +139,52 @@ void configSensors() {
 // turn the motor connected in the CLAW
 // over 90 deg
 void grab() {
-   RotateMotor(CLAW, 15, 90);
+   RotateMotor(CLAW, DEFAULT_CLAW_POWER, 90);
 }
 
 // rev
 // turn the motor connected in the CLAW
 // over -90 deg
 void drop() {
-   RotateMotor(CLAW, 15, -90);
+   RotateMotor(CLAW, DEFAULT_CLAW_POWER, -90);
 }
 
-void getMailboxMessage(byte mailboxIdx) {}
+// Return true if ReadMessage with success
+// false cc
+bool getMailboxMessage(string &message) {
+     bool successOnRead;
+     successOnRead = (ReceiveMessage(MAILBOX1, true, message) == NO_ERR ? true : false);
+     return successOnRead;
+}
 
 // read and return the robot
 // distance to any object
-byte robotDistance(byte port) {
+byte getRobotDistance(byte port) {
      return SensorUS(port);
 }
 
 char sendMessage(string message) {
      return SendMessage(MAILBOX10, message);
 }
+
+bool isTouched() {
+     return (Sensor(S3) ? true : false);
+}
+
+byte getLightReflection() {
+     return Sensor(S4);
+}
+
+bool readSupervisorMessage() {
+     string supervisorMessage;
+     bool successOnRead;
+     successOnRead = getMailboxMessage(supervisorMessage);
+     if (successOnRead) {
+          return true;
+     }
+     return successOnRead;
+     
+}
+
+void protocolMessageParser() {}
+

@@ -25,7 +25,6 @@ class RobotPositionThread(QThread):
     position_updated = pyqtSignal(int, int)
 
     def run(self):
-        import time
         while True:
            # função q recebe os dados
             

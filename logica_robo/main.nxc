@@ -56,14 +56,6 @@ byte getLightReflection();
 bool readSupervisorMessage();
 void protocolMessageParser();
 
-// use, by default mailbox 1
-// read a mailbox and show it
-// on NXT display
-task readMailbox() {
-     string in;
-     in = bluetoothSlaveGet();
-     TextOut(0, LCD_LINE1, in);
-}
 
 // send to supervisor all the
 // necessary informations
@@ -72,8 +64,9 @@ task readMailbox() {
 task sendRobotInfo() {
     string message;
     while (true)
-          message = NumToStr(10);
+          message = NumToStr(getRobotDistance(IN_2));
           sendMessage(message);
+          Wait(1000);
 }
 
 // global variable
@@ -81,39 +74,37 @@ task sendRobotInfo() {
 // for robot
 bool isRobotBusy = false;
 
+//task main ()
+//{
+//     StartTask(readMailbox);
+//}
+
+
+
+// use, by default mailbox 1
+// read a mailbox and show it
+// on NXT display
+task readMailbox() {
+     while (true) {
+          TextOut(0, LCD_LINE1, "Waiting message");
+          string in;
+          if (ReceiveMessage(0, true, in) == NO_ERR) {
+               SendMessage(10, "3;44;33");
+               ClearScreen();
+               TextOut(0, LCD_LINE2, "received");
+               TextOut(0, LCD_LINE3, in);
+               Wait(3000);
+          }
+          else Wait(500);
+          ClearScreen();
+     }
+}
+
 task main ()
 {
-    byte distance;
-    configSensors();
-    StartTask(sendRobotInfo);
-    string message = "";
-    string in, out;
-    while (true)
-     {
-        if (ReceiveMessage(1, true, in) == NO_ERR)
-          {
-            out = StrCat("Hello ", in);
-            if (!strcmp(in, "vaemfrente")) {
-               OnFwdSync(OUT_AB, 30, 0);
-               Wait(3000);
-               Off(OUT_A);
-            }
-            TextOut (0, LCD_LINE1, out, true);
-            SendMessage (10, out);
-          }
-        else 
-          {
-            distance = getRobotDistance(IN_2);
-            TextOut(0, LCD_LINE1, "OPA!");
-            NumOut(0, LCD_LINE3, 10);
-            NumOut(0, LCD_LINE5, distance);
-            NumOut(0, LCD_LINE7, Sensor(S3));
-            NumOut(0, LCD_LINE8, Sensor(S4));
-            Wait(1000);
-            ClearScreen();
-          }
-      }
+     StartTask(readMailbox);
 }
+
 
 void GoFoward(byte power, byte seconds) {
      OnFwdSync(OUT_AB, power, 0);

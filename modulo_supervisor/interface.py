@@ -1,7 +1,15 @@
 import sys
+import nxt
+import nxt.locator
+import nxt.backend.bluetooth as bluetooth
+import nxt.brick
+from time import sleep
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QFrame, QLabel
 from PyQt5.QtGui import QPainter, QColor
+
+NXT_MAC_ADDRESS = "00:16:53:09:81:69"
+nxt_brick = nxt.locator.find(host=NXT_MAC_ADDRESS)
 
 """
 class Position(Enum):
@@ -26,8 +34,9 @@ class RobotPositionThread(QThread):
 
     def run(self):
         while True:
-           # função q recebe os dados
-            
+            # formato 'new_x;new_y'
+            coords = nxt_brick.message_read(1, True)
+            new_x, new_y = map(int, string.split(';'))
             self.position_updated.emit(new_x, new_y)
 
 class RobotArea(QFrame):
@@ -120,10 +129,12 @@ class RobotInterface(QWidget):
         if not self.robot_active:
             self.robot_active = True
             self.button.setText('Desativar Robô')
+            nxt_brick.message_write(1, '1')
             self.position_thread.start()
         else:
             self.robot_active = False
             self.button.setText('Ativar Robô')
+            nxt_brick.message_write(1, '0')
             self.position_thread.terminate()
 
     def update_robot_position(self, new_x, new_y):

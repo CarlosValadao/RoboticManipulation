@@ -6,7 +6,7 @@ from time import sleep
 
 # ENDERECO MAC DO NXT 01 (COM DISPLAY BOM E EMITINDO SONS MANEIROS)
 NXT_MAC_ADDRESS = "00:16:53:09:81:69"
-MESSAGE = b'Ni'
+MESSAGE = b'1'
 MAILBOX10 = 9
 
 nxt_brick = nxt.locator.find(host=NXT_MAC_ADDRESS)
@@ -17,12 +17,15 @@ nxt_brick = nxt.locator.find(host=NXT_MAC_ADDRESS)
 # Full circle in the opposite direction.
 #mymotor.turn(-25, 360)
 nxt_brick.message_write(0, MESSAGE)
-sleep(2)
+while True:
+    try:
+        (inbox, message) = nxt_brick.message_read(MAILBOX10, 0, True)
+        print(f'MENSAGEM LIDA DO MAILBOX 1 DO NXT "{message.decode('utf-8')}"')
+    except:
+        pass
 #(inbox, message) = nxt_brick.message_read(10, 0, True)
 #print(f'INBOX -> {inbox}; MESSAGE -> {message}')
 #nxt_brick.message_write(inbox=1, message=MESSAGE)
-(inbox, message) = nxt_brick.message_read(10, 0, True)
-print(f'MENSAGEM LIDA DO MAILBOX 1 DO NXT "{message.decode('utf-8')}"')
 print(nxt_brick.get_device_info())
 print(nxt_brick.get_firmware_version())
 nxt_brick.play_tone_and_wait(2500, 1000)

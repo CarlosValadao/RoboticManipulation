@@ -1,7 +1,15 @@
 import sys
-from PyQt5.QtCore import Qt, QTimer
+import nxt
+import nxt.locator
+import nxt.backend.bluetooth as bluetooth
+import nxt.brick
+from time import sleep
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QFrame, QLabel
 from PyQt5.QtGui import QPainter, QColor
+
+NXT_MAC_ADDRESS = "00:16:53:09:81:69"
+nxt_brick = nxt.locator.find(host=NXT_MAC_ADDRESS)
 
 """
 class Position(Enum):
@@ -19,6 +27,17 @@ def checkArea(y):
     else:
         return "ERROR"
 """
+
+# thread para enviar as coordenadas do robô
+class RobotPositionThread(QThread):
+    position_updated = pyqtSignal(int, int)
+
+    def run(self):
+        while True:
+            # formato 'new_x;new_y'
+            coords = nxt_brick.message_read(1, True)
+            new_x, new_y = map(int, string.split(';'))
+            self.position_updated.emit(new_x, new_y)
 
 class RobotArea(QFrame):
     def __init__(self):
@@ -102,38 +121,37 @@ class RobotInterface(QWidget):
 
         self.robot_active = False
 
-        # simula a atualização do robô (tirar depois que fizer a comunicação)
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_robot_position)
+        # cria a thread de posição
+        self.position_thread = RobotPositionThread()
+        self.position_thread.position_updated.connect(self.update_robot_position)
 
     def toggle_robot(self):
         if not self.robot_active:
             self.robot_active = True
             self.button.setText('Desativar Robô')
-            self.timer.start(100)  # atualiza a cada 100 ms
+            nxt_brick.message_write(1, '1')
+            self.position_thread.start()
         else:
             self.robot_active = False
             self.button.setText('Ativar Robô')
-            self.timer.stop()
+            nxt_brick.message_write(1, '0')
+            self.position_thread.terminate()
 
-    def update_robot_position(self):
-        # movimentação aleatória (tirar depois que fizer a comunicação)
-        import random
-        current_position = self.robot_area.robot_position
-        new_x = current_position[0] + random.randint(-5, 5)
-        new_y = current_position[1] + random.randint(-5, 5)
-
+    def update_robot_position(self, new_x, new_y):
         # limita a posição do robô
         robot_area_width = self.robot_area.width()
         robot_area_height = self.robot_area.height()
 
+        # garante que o robô não saia dos limites da área
         new_x = max(0, min(new_x, robot_area_width - 20))  # -20 para manter o círculo visível
         new_y = max(0, min(new_y, robot_area_height - 20))
 
+        # atualiza a posição do robô na área
         self.robot_area.update_robot_position([new_x, new_y])
 
         # atualiza o campo de coordenadas com a nova posição do robô
         self.coordinates_label.setText(f'Coordenadas: ({new_x}, {new_y})')
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

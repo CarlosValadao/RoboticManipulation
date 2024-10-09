@@ -13,6 +13,8 @@
 
 // silver color range on light sensor
 
+#include "BLUETOOTH.h"
+
 // PROTOCOL CONSTANTS
 #define REQUEST  1
 #define RESPONSE 2
@@ -54,7 +56,6 @@ byte getLightReflection();
 bool readSupervisorMessage();
 void protocolMessageParser();
 
-mutex robotMutex;
 
 // send to supervisor all the
 // necessary informations
@@ -72,14 +73,12 @@ task sendRobotInfo() {
 // looks like a mutex
 // for robot
 bool isRobotBusy = false;
-string in = "asdasd";
+
 //task main ()
 //{
 //     StartTask(readMailbox);
 //}
 
-int cont_x = 0;
-int cont_y = 0;
 
 
 // use, by default mailbox 1
@@ -87,42 +86,23 @@ int cont_y = 0;
 // on NXT display
 task readMailbox() {
      while (true) {
-          //TextOut(0, LCD_LINE1, "Waiting message");
+          TextOut(0, LCD_LINE1, "Waiting message");
+          string in;
           if (ReceiveMessage(0, true, in) == NO_ERR) {
-               //SendMessage(10, "3;44;33");
-               //ClearScreen();
-               //TextOut(0, LCD_LINE2, "received");
-               //TextOut(0, LCD_LINE3, in);
+               SendMessage(10, "3;44;33");
+               ClearScreen();
+               TextOut(0, LCD_LINE2, "received");
+               TextOut(0, LCD_LINE3, in);
                Wait(3000);
           }
-          else in = "abc";
-          //ClearScreen();
-     }
-}
-
-task sendMailbox() {
-	//TextOut(0, LCD_LINE3, in);
-	//Wait(3000);
-     	string result;
-	     while (true) {
-	     	if(strcmp(in, "1") == 0)
-	     	while(true){
-	     	TextOut(0, LCD_LINE2, "iniciou envio");
-		  result = StrCat("3;", NumToStr(cont_x), ";", NumToStr(cont_y));
-		  SendMessage(MAILBOX10, result);
-		  TextOut(0, LCD_LINE1, in);
-		  cont_x++;
-		  cont_y += 2;
-		  Wait(1000);
-		  ClearScreen();
-     	     }
+          else Wait(500);
+          ClearScreen();
      }
 }
 
 task main ()
 {
      StartTask(readMailbox);
-     StartTask(sendMailbox);
 }
 
 

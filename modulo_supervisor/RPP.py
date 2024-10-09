@@ -15,7 +15,7 @@ def parse_message(message: str) -> tuple[int]|int:
         return response_type
     elif message_head == POSITION:
         (x_pos, y_pos) = message_tail.split(sep=';')
-        return (x_pos, y_pos)
+        return (int(x_pos), int(y_pos.replace('\x00', '')))
 
 def format_message(type: int, code: int) -> str:
     return f'{type};{code}'

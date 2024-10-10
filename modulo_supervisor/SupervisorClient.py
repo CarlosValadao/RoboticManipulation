@@ -26,6 +26,9 @@ class SupervisorClient:
         self._have_new_message: bool = False
         self._there_is_running_program_on_nxt: bool = False
 
+    def get_received_messages(self):
+        return self.received_messages
+    
     def connect_to_nxt(self, nxt_bluetooth_mac: str) -> Brick|None:
         try:
             nxt_brick = find(host=nxt_bluetooth_mac)
@@ -78,7 +81,8 @@ class SupervisorClient:
                 self.received_messages.append(data)
                 print(f'{datetime_formated()} - {data}')
             hasActiveProgram = self._is_running_program_on_nxt()
-        print("Encerrando a conexão!")
+        print("Não existe nenhum programa executando")
+        print('Encerrando a conexão')
         self.close_nxt_con()
     
     # start a thread that catch all the messages
@@ -92,10 +96,13 @@ class SupervisorClient:
     
     def _is_running_program_on_nxt(self) -> bool:
         try:
-            if self._nxt_brick.get_current_program_name():
+            current_program_name = self._nxt_brick.get_current_program_name()
+            if current_program_name:
+                self._current_program_name = current_program_name
                 return True
         # NoActiveProgramError - no active program on nxt
         except:
+            self._current_program_name = None
             return False
     
     def get_nxt_brick(self) -> Brick|None:
@@ -110,6 +117,17 @@ class SupervisorClient:
         else:
             system('clear')
 
+    # criar uma funcao responsavel por gerar alertas com base nas
+    # propriedades do SupervisorClient
+    # Avisos como encerrar conexao
+    # Programa atual nao executando
+    # Dispositivo inalcancavel, etc e etc
+    def show_warning_message(self, message) -> None:
+        print(f'[AVISO] - {message}')
+    
+    def show_success_message(self, message) -> None:
+        return
+    
 if __name__ == '__main__':
     supervisor_client = SupervisorClient(NXT_BLUETOOTH_MAC_ADDRESS)
     supervisor_client.send_message('1')

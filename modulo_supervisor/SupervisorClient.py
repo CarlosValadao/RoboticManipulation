@@ -33,12 +33,12 @@ class SupervisorClient:
         try:
             nxt_brick = find(host=nxt_bluetooth_mac)
             self._is_nxt_connected = True
-            print('Conectado com sucesso!')
+            self.show_success_message('connected with success :]')
             return nxt_brick
         except BrickNotFoundError:
             self.clear_console()
-            print("NXT está inalcançável :/")
-            print("Tentando se conectar novamente")
+            self.show_warning_message("NXT is unreachable")
+            self.show_warning_message("try to connect agin...")
             self._is_nxt_connected = False
             return None
     
@@ -60,7 +60,8 @@ class SupervisorClient:
         try:
             self._nxt_brick.message_write(MAILBOX1, message.encode())
         except DirectProtocolError:
-            print("Impossivel enviar mensagem - Não existe nenhum programa executando no NXT!")
+            self.show_warning_message("it's impossible to send messages\
+                                    - there's nothing running on NXT")
     
     def _read_message(self) -> tuple[int]|int:
         try:
@@ -81,8 +82,9 @@ class SupervisorClient:
                 self.received_messages.append(data)
                 print(f'{datetime_formated()} - {data}')
             hasActiveProgram = self._is_running_program_on_nxt()
-        print("Não existe nenhum programa executando")
-        print('Encerrando a conexão')
+        self.show_warning_message("it's impossible to read new messages - \
+                                there's nothing running on NXT")
+        self.show_warning_message('ending NXT connection')
         self.close_nxt_con()
     
     # start a thread that catch all the messages
@@ -117,16 +119,11 @@ class SupervisorClient:
         else:
             system('clear')
 
-    # criar uma funcao responsavel por gerar alertas com base nas
-    # propriedades do SupervisorClient
-    # Avisos como encerrar conexao
-    # Programa atual nao executando
-    # Dispositivo inalcancavel, etc e etc
     def show_warning_message(self, message) -> None:
-        print(f'[AVISO] - {message}')
+        print(f'[WARNING] - {message}')
     
     def show_success_message(self, message) -> None:
-        return
+        print(f'[SUCCESS] - {message}')
     
 if __name__ == '__main__':
     supervisor_client = SupervisorClient(NXT_BLUETOOTH_MAC_ADDRESS)

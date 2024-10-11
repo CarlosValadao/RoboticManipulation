@@ -1,15 +1,12 @@
 import sys
-import nxt
-import nxt.locator
-import nxt.backend.bluetooth as bluetooth
-import nxt.brick
 from time import sleep
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QFrame, QLabel
 from PyQt5.QtGui import QPainter, QColor
-
-NXT_MAC_ADDRESS = "00:16:53:09:81:69"
-nxt_brick = nxt.locator.find(host=NXT_MAC_ADDRESS)
+import SupervisorClient
+from threading import Thread
+from constants import NXT_BLUETOOTH_MAC_ADDRESS
+from os import environ
 
 """
 class Position(Enum):
@@ -29,15 +26,18 @@ def checkArea(y):
 """
 
 # thread para enviar as coordenadas do robô
+
+
 class RobotPositionThread(QThread):
     position_updated = pyqtSignal(int, int)
 
     def run(self):
         while True:
             # formato 'new_x;new_y'
-            coords = nxt_brick.message_read(1, True)
-            new_x, new_y = map(int, string.split(';'))
-            self.position_updated.emit(new_x, new_y)
+            received_messages = supervisor_client.get_received_messages()
+            if(received_messages):
+                (new_x, new_y) = received_messages[-1]
+                self.position_updated.emit(new_x, new_y)
 
 class RobotArea(QFrame):
     def __init__(self):
@@ -129,12 +129,12 @@ class RobotInterface(QWidget):
         if not self.robot_active:
             self.robot_active = True
             self.button.setText('Desativar Robô')
-            nxt_brick.message_write(1, '1')
+            supervisor_client.send_message('1')
             self.position_thread.start()
         else:
             self.robot_active = False
             self.button.setText('Ativar Robô')
-            nxt_brick.message_write(1, '0')
+            supervisor_client.send_message('0')
             self.position_thread.terminate()
 
     def update_robot_position(self, new_x, new_y):
@@ -154,6 +154,9 @@ class RobotInterface(QWidget):
 
 
 if __name__ == '__main__':
+    environ['QT_QPA_PLATFORM'] = 'xcb'
+    supervisor_client = SupervisorClient.SupervisorClient(NXT_BLUETOOTH_MAC_ADDRESS)
+    supervisor_client.get_all_messages()
     app = QApplication(sys.argv)
     window = RobotInterface()
     window.show()

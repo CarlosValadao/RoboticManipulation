@@ -6,6 +6,15 @@ from typing import Final
 RESPONSE: Final = '2'
 POSITION: Final = '3'
 
+# Request codes
+ACTIVATE: Final = 0
+STATUS: Final = 1
+
+# Response codes
+SUCCESS: Final = 0
+ERROR: Final = 1
+COMPLETED: Final = 2
+ONGOING: Final = 3
 
 def parse_message(message: str) -> tuple[int]|int:
     message_head = message[0]
@@ -15,7 +24,7 @@ def parse_message(message: str) -> tuple[int]|int:
         return response_type
     elif message_head == POSITION:
         (x_pos, y_pos) = message_tail.split(sep=';')
-        return (x_pos, y_pos)
+        return (int(x_pos), int(y_pos.replace('\x00', '')))
 
 def format_message(type: int, code: int) -> str:
     return f'{type};{code}'

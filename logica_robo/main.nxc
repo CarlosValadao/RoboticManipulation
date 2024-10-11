@@ -15,13 +15,6 @@
 
 #include "BLUETOOTH.h"
 
-// PROTOCOL CONSTANTS
-#define REQUEST  1
-#define RESPONSE 2
-#define POSITION 3
-#define ACTIVATE 10
-#define STATUS   11
-
 #define wait(seconds); Wait(seconds*1000);
 
 #define LEFT_MOTOR  OUT_A
@@ -43,6 +36,25 @@
 #define CLOCKWISE 0
 #define COUNTERCLOCKWISE 1
 
+// ------------ RPP defines ---------------------
+
+// header
+#define REQUEST  1
+#define RESPONSE 2
+#define POSITION 3
+
+// request type messages
+#define ACTIVATE 0
+#define STATUS   1
+
+// response type messages
+#define SUCCESS   0
+#define ERROR     1
+#define COMPLETED 2
+#define ONGOING   3
+
+// ----------------------------------------------
+
 void GoFoward(byte power, byte seconds);
 void GoBackward(byte power, byte seconds);
 void configSensors();
@@ -54,7 +66,7 @@ bool isTouched();
 char sendMessage(string message);
 byte getLightReflection();
 bool readSupervisorMessage();
-void protocolMessageParser();
+void protocolMessageParser(string message, byte result[]);
 
 
 // send to supervisor all the
@@ -177,5 +189,14 @@ bool readSupervisorMessage() {
      
 }
 
-void protocolMessageParser() {}
-
+void protocolMessageParser(string message, byte result[])
+{
+     string type, value;
+     byte type_b, value_b;
+     type = message[0];
+     value = message[2];
+     type_b = StrToNum(type);
+     value_b = StrToNum(value);
+     result[0] = type_b;
+     result[1] = value_b;
+}

@@ -35,7 +35,7 @@ Use MAILBOX10 to receive message
 byte parseMessage(string &message);
 bool formatMessage(byte code, string &smessage);
 bool formatDataMessage(float xcoord, float ycoord, string &smessage);
-bool sendMessage(string &message);
+bool sendMessage(string &message, byte msgType);
 bool readMessage(string &receivedMsg);
 
 #endif
@@ -68,9 +68,18 @@ void formatDataMessage(float xcoord, float ycoord, string &smessage)
      smessage = StrCat("3;", sxcoord, sycoord);
 }
 
-bool sendMessage(string &message)
+bool sendMessage(string &message, byte msgType)
 {
-     return (SendMessage(9, message) ? true : false);
+     char successOnSend;
+     if (msgType == RESPONSE)
+     {
+        successOnSend = (SendMessage(MAILBOX10, message) == NO_ERR);
+     }
+     else if (msgType == POSITION)
+     {
+        successOnSend = (SendMessage(MAILBOX3, message) == NO_ERR);
+     }
+     return (successOnSend ? true : false);
 }
 
 bool readMessage(string &receivedMsg)

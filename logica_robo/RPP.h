@@ -1,9 +1,19 @@
-# RPP protocol defines and functions
+/*
+RPP protocol defines and functions
+Use MAILBOX3 to send RESPONSE data
+Use MAILBOX1 to send RESPONSE message
+Use MAILBOX10 to receive message
+*/ 
+   
 
 #ifndef __RPP__
 #define __RPP__
 
-// ------------ RPP defines ---------------------
+/*
+---------------------
+     RPP defines
+---------------------
+*/ 
 
 // header
 #define REQUEST  1
@@ -22,15 +32,15 @@
 
 // the robot only response the request from
 // supervisor
-void parseMessage(string message, byte data[]);
+byte parseMessage(string &message);
 bool formatMessage(byte code, string &smessage);
 bool formatDataMessage(float xcoord, float ycoord, string &smessage);
-bool sendMessage(string message);
-string readMessage();
+bool sendMessage(string &message);
+bool readMessage(string &receivedMsg);
 
 #endif
 
-void parserMessage(string message, byte data[])
+byte parseMessage(string &message)
 {
      string type, value;
      byte type_b, value_b;
@@ -38,9 +48,9 @@ void parserMessage(string message, byte data[])
      value = message[2];
      type_b = StrToNum(type);
      value_b = StrToNum(value);
-     if (type_b == 1) data[1] = 255;
-     else data[0] = type_b;
-     data[1] = value_b;
+     if (type_b == REQUEST)
+          return value_b;
+     else return UCHAR_MAX;
 }
 
 void formatMessage(byte code, string &smessage)
@@ -58,14 +68,14 @@ void formatDataMessage(float xcoord, float ycoord, string &smessage)
      smessage = StrCat("3;", sxcoord, sycoord);
 }
 
-bool sendMessage(string message)
+bool sendMessage(string &message)
 {
      return (SendMessage(9, message) ? true : false);
 }
 
 bool readMessage(string &receivedMsg)
 {
-       if (ReceiveMessage(0, true, message) == NO_ERR)
+       if (ReceiveMessage(0, true, receivedMsg) == NO_ERR)
           return true;
        return false;
 }

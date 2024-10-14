@@ -5,20 +5,7 @@
 // Ultrasonic Sensor  -> port 2
 // Light Sensor       -> port 4
 
-// By default
-// receive on MAILBOX1
-// send on MAILBOX10
-
-// black color range on light sensor
-
-// silver color range on light sensor
-
-// PROTOCOL CONSTANTS
-#define REQUEST  1
-#define RESPONSE 2
-#define POSITION 3
-#define ACTIVATE 10
-#define STATUS   11
+#include "RPP.h"
 
 #define wait(seconds); Wait(seconds*1000);
 
@@ -41,23 +28,6 @@
 #define CLOCKWISE 0
 #define COUNTERCLOCKWISE 1
 
-// ------------ RPP defines ---------------------
-
-// header
-#define REQUEST  1
-#define RESPONSE 2
-#define POSITION 3
-
-// request type messages
-#define ACTIVATE 0
-#define STATUS   1
-
-// response type messages
-#define SUCCESS   0
-#define ERROR     1
-#define COMPLETED 2
-#define ONGOING   3
-
 // ----------------------------------------------
 
 void GoFoward(byte power, byte seconds);
@@ -68,18 +38,33 @@ void drop();
 bool getMailboxMessage(string &message);
 byte getRobotDistance(byte port);
 bool isTouched();
-char sendMessage(string message);
 byte getLightReflection();
 bool readSupervisorMessage();
 void protocolMessageParser(string message, byte result[]);
+void handleRequest(byte requestType);
 
+/*
+-----------------------
+    Global Variables
+-----------------------
+*/
 mutex robotMutex;
+mutex messageMutex;
+
+byte robotStatus = UCHAR_MAX;
+
+bool isRobotBusy = false;
+string receivedMessage, msgToSend = "";
+int cont_x = 0;
+int cont_y = 0;
+
 
 // send to supervisor all the
 // necessary informations
 // right and left motors information
 // at all and etcetera
-task sendRobotInfo() {
+task sendRobotInfo()
+{
     string message;
     while (true)
           message = NumToStr(getRobotDistance(IN_2));
@@ -87,35 +72,27 @@ task sendRobotInfo() {
           Wait(1000);
 }
 
-// global variable
-// looks like a mutex
-// for robot
-bool isRobotBusy = false;
-string in = "asdasd";
-//task main ()
-//{
-//     StartTask(readMailbox);
-//}
-
-int cont_x = 0;
-int cont_y = 0;
 
 
 // use, by default mailbox 1
 // read a mailbox and show it
 // on NXT display
-task readMailbox() {
+task readSupervisorMessages()
+{
+     byte requestType;
+     string recvdMessage;
      while (true) {
-          //TextOut(0, LCD_LINE1, "Waiting message");
-          if (ReceiveMessage(0, true, in) == NO_ERR) {
-               //SendMessage(10, "3;44;33");
-               //ClearScreen();
-               //TextOut(0, LCD_LINE2, "received");
-               //TextOut(0, LCD_LINE3, in);
-               Wait(3000);
+          TextOut(0, LCD_LINE1, "Wait for msg...");
+          if (readMessage(recvdMessage))
+          {
+               Acquire(messageMutex);
+               receivedMessage = recvdMessage;
+               TextOut(0, LCD_LINE2, "received");
+               TextOut(0, LCD_LINE3, receivedMessage);
+               Wait(500);
+               Release(messageMutex);
           }
-          else in = "abc";
-          //ClearScreen();
+          ClearScreen();
      }
 }
 
@@ -124,12 +101,12 @@ task sendMailbox() {
 	//Wait(3000);
      	string result;
 	     while (true) {
-	     	if(strcmp(in, "1") == 0)
+	     	if(strcmp(receivedMessage, "1") == 0)
 	     	while(true){
 	     	TextOut(0, LCD_LINE2, "iniciou envio");
 		  result = StrCat("3;", NumToStr(cont_x), ";", NumToStr(cont_y));
 		  SendMessage(MAILBOX10, result);
-		  TextOut(0, LCD_LINE1, in);
+		  TextOut(0, LCD_LINE1, receivedMessage);
 		  cont_x++;
 		  cont_y += 2;
 		  Wait(1000);
@@ -140,10 +117,26 @@ task sendMailbox() {
 
 task main ()
 {
-     StartTask(readMailbox);
+     StartTask(readSupervisorMessages);
      StartTask(sendMailbox);
 }
 
+
+void handleRequest(byte requestType)
+{
+     switch (requestType)
+     {
+            case 0:
+                 if (isRobotBusy) break;
+                 else
+                 {
+                     break;
+                 }
+                 break;
+            case 1:
+
+     }
+}
 
 void GoFoward(byte power, byte seconds) {
      OnFwdSync(OUT_AB, power, 0);
@@ -191,10 +184,6 @@ bool getMailboxMessage(string &message) {
 // distance to any object
 byte getRobotDistance(byte port) {
      return SensorUS(port);
-}
-
-char sendMessage(string message) {
-     return SendMessage(MAILBOX10, message);
 }
 
 bool isTouched() {

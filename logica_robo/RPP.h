@@ -23,8 +23,10 @@
 // the robot only response the request from
 // supervisor
 void parseMessage(string message, byte data[]);
-string formatMessage(byte code);
-string formatDataMessage(float xcoord, float ycoord);
+bool formatMessage(byte code, string &smessage);
+bool formatDataMessage(float xcoord, float ycoord, string &smessage);
+bool sendMessage(string message);
+string readMessage();
 
 #endif
 
@@ -41,19 +43,30 @@ void parserMessage(string message, byte data[])
      data[1] = value_b;
 }
 
-string formatMessage(byte code)
+void formatMessage(byte code, string &smessage)
 {
-     string scode, formattedMessage;
+     string scode;
      scode = NumToStr(code);
-     formattedMessage = StrCat("2;", scode);
-     return formattedMessage;
+     smessage = StrCat("2;", scode);
 }
 
-string formatDataMessage(float xcoord, float ycoord)
+void formatDataMessage(float xcoord, float ycoord, string &smessage)
 {
-     string formattedMessage, sxcoord, sycoord;
+     string sxcoord, sycoord;
      sxcoord = NumToStr(ycoord);
      sycoord = NumToStr(ycoord);
-     formattedString = StrCat("3;", sxcoord, sycoord);
-     return formattedMessage;
+     smessage = StrCat("3;", sxcoord, sycoord);
 }
+
+bool sendMessage(string message)
+{
+     return (SendMessage(9, message) ? true : false);
+}
+
+bool readMessage(string &receivedMsg)
+{
+       if (ReceiveMessage(0, true, message) == NO_ERR)
+          return true;
+       return false;
+}
+

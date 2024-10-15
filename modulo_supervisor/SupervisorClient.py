@@ -21,13 +21,17 @@ class SupervisorClient:
         self._nxt_brick: Brick = self.establish_nxt_con(nxt_bluetooth_mac)
         # as soon as messages are read
         # they're stored here
-        self.received_messages: list[tuple[int]|int] = []
+        self._recv_data_msg: list[tuple[int]|int] = []
+        self._recv_response_msg: list[int] = []
         # it is a mutex
         self._have_new_message: bool = False
         self._there_is_running_program_on_nxt: bool = False
 
-    def get_received_messages(self):
-        return self.received_messages
+    def get_data_msgs(self) -> list[tuple[int]]:
+        return self._recv_data_msg
+    
+    def get_response_msgs(self) -> list[int]:
+        return self._recv_response_msg
     
     def connect_to_nxt(self, nxt_bluetooth_mac: str) -> Brick|None:
         try:
@@ -78,8 +82,12 @@ class SupervisorClient:
         while hasActiveProgram:
             received_message = self._read_message()
             if self._have_new_message:
+                msg_type = RPP.message_type(received_message)
                 data = RPP.parse_message(received_message)
-                self.received_messages.append(data)
+                if (msg_type == RPP.POSITION_I):
+                    self._recv_data_msg.append(data)
+                else:
+                    self._recv_response_msg.append(data)
                 print(f'{datetime_formated()} - {data}')
             hasActiveProgram = self._is_running_program_on_nxt()
         self.show_warning_message("it's impossible to read new messages - \
@@ -109,9 +117,6 @@ class SupervisorClient:
     
     def get_nxt_brick(self) -> Brick|None:
         return self._nxt_brick
-    
-    def get_latest_message(self) -> tuple[int]|int:
-        return self.received_messages[-1]
 
     def clear_console(self) -> None:
         if name == 'nt':

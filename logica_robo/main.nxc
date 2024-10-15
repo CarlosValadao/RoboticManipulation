@@ -7,8 +7,6 @@
 
 #include "RPP.h"
 
-#define wait(seconds); Wait(seconds*1000);
-
 #define LEFT_MOTOR  OUT_A
 #define RIGHT_MOTOR OUT_B
 #define CLAW        OUT_C
@@ -51,102 +49,85 @@ void handleRequest(byte requestType);
 mutex robotMutex;
 mutex messageMutex;
 
-byte robotStatus = UCHAR_MAX;
-
 bool isRobotBusy = false;
-string receivedMessage, msgToSend = "";
-int cont_x = 0;
-int cont_y = 0;
+
+byte robotStatus = UCHAR_MAX;
+byte requestCode = UCHAR_MAX;
+
+string requestMsg, msgToSend = "";
+string dataMsgToSend, responseToRequest = "";
+
+long cont_x = 0;
+long cont_y = 0;
 
 
-// send to supervisor all the
-// necessary informations
-// right and left motors information
-// at all and etcetera
-task sendRobotInfo()
+/*
+Send robot position X and Y coordinates
+every one sec
+*/
+task sendRobotPosition()
 {
-    string message;
-    while (true)
-          message = NumToStr(getRobotDistance(IN_2));
-          sendMessage(message);
-          Wait(1000);
+     while (isRobotBusy)
+     {
+           formatDataMessage(cont_x, cont_y, dataMsgToSend);
+           sendMessage(dataMsgToSend, POSITION);
+           cont_x = cont_x + 1;
+           cont_y = cont_y + 2;
+           Wait(1000);
+     }
 }
 
-
-
-// use, by default mailbox 1
-// read a mailbox and show it
-// on NXT display
+/*
+Read Supervisor messages and
+show them on NXT display
+*/
 task readSupervisorMessages()
 {
      byte requestType;
      string recvdMessage;
-     while (true) {
+     while (isRobotBusy)
+     {
           TextOut(0, LCD_LINE1, "Wait for msg...");
           if (readMessage(recvdMessage))
           {
                Acquire(messageMutex);
-               receivedMessage = recvdMessage;
-               TextOut(0, LCD_LINE2, "received");
-               TextOut(0, LCD_LINE3, receivedMessage);
-               Wait(500);
+               requestCode = parseMessage(recvdMessage);
+               requestMsg = recvdMessage;
                Release(messageMutex);
+               TextOut(0, LCD_LINE2, "received");
+               TextOut(0, LCD_LINE3, requestMsg);
+               handleRequest(requestCode);
           }
           ClearScreen();
      }
 }
 
-task sendMailbox() {
-	//TextOut(0, LCD_LINE3, in);
-	//Wait(3000);
-     	string result;
-	     while (true) {
-	     	if(strcmp(receivedMessage, "1") == 0)
-	     	while(true){
-	     	TextOut(0, LCD_LINE2, "iniciou envio");
-		  result = StrCat("3;", NumToStr(cont_x), ";", NumToStr(cont_y));
-		  SendMessage(MAILBOX10, result);
-		  TextOut(0, LCD_LINE1, receivedMessage);
-		  cont_x++;
-		  cont_y += 2;
-		  Wait(1000);
-		  ClearScreen();
-     	     }
-     }
-}
-
 task main ()
 {
+     isRobotBusy = true;
      StartTask(readSupervisorMessages);
-     StartTask(sendMailbox);
+     StartTask(sendRobotPosition);
+     StartTask(sendRobotResponse);
 }
 
 
 void handleRequest(byte requestType)
 {
-     switch (requestType)
-     {
-            case 0:
-                 if (isRobotBusy) break;
-                 else
-                 {
-                     break;
-                 }
-                 break;
-            case 1:
-
-     }
+     Acquire(messageMutex);
+     formatMessage(msgToSend, robotStatus);
+     sendMessage(msgToSend, RESPONSE);
+     Release(messageMutex);
 }
 
 void GoFoward(byte power, byte seconds) {
      OnFwdSync(OUT_AB, power, 0);
-     wait(seconds);
+     Wait(seconds);
      Off(OUT_AB);
 }
 
 void GoBackward(byte power, byte seconds) {
      OnRevSync(OUT_AB, power, 0);
-     wait(seconds);
+     Wait(seconds);
      Off(OUT_AB);
 }
 

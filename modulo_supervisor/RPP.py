@@ -3,8 +3,13 @@
 from typing import Final
 
 # Header message type
+REQUEST: Final = '1'
 RESPONSE: Final = '2'
 POSITION: Final = '3'
+
+REQUEST_I: Final = 1
+RESPONSE_I: Final = 2
+POSITION_I: Final = 3
 
 # Request codes
 ACTIVATE: Final = 0
@@ -26,5 +31,8 @@ def parse_message(message: str) -> tuple[int]|int:
         (x_pos, y_pos) = message_tail.split(sep=';')
         return (int(x_pos), int(y_pos.replace('\x00', '')))
 
-def format_message(type: int, code: int) -> str:
-    return f'{type};{code}'
+def format_message(requestCode: int) -> str:
+    return f'1;{requestCode}'
+
+def message_type(message: str) -> int:
+    return POSITION_I if message[0] == POSITION else RESPONSE_I

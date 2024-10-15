@@ -156,7 +156,7 @@ class RobotInterface(QWidget):
 if __name__ == '__main__':
     environ['QT_QPA_PLATFORM'] = 'xcb'
     supervisor_client = SupervisorClient.SupervisorClient(NXT_BLUETOOTH_MAC_ADDRESS)
-    supervisor_client.get_all_messages()
+    supervisor_client.catch_all_messages()
     app = QApplication(sys.argv)
     window = RobotInterface()
     window.show()

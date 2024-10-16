@@ -129,7 +129,7 @@ class RobotInterface(QWidget):
         if not self.robot_active:
             self.robot_active = True
             self.button.setText('Desativar Robô')
-            supervisor_client.send_message('1;1')
+            supervisor_client.send_message(request_code=1)
             self.position_thread.start()
         else:
             self.robot_active = False

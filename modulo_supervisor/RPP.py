@@ -31,8 +31,5 @@ def parse_message(message: str) -> tuple[int]|int:
         (x_pos, y_pos) = message_tail.split(sep=';')
         return (int(x_pos), int(y_pos.replace('\x00', '')))
 
-def format_message(requestCode: int) -> str:
-    return f'1;{requestCode}'
-
-def message_type(message: str) -> int:
-    return POSITION_I if message[0] == POSITION else RESPONSE_I
+def format_message(request_code: int) -> bytes:
+    return f'1;{request_code}'.encode(encoding='utf-8')

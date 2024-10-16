@@ -148,6 +148,7 @@ class SupervisorClient:
     
 if __name__ == '__main__':
     supervisor_client = SupervisorClient(NXT_BLUETOOTH_MAC_ADDRESS)
-    supervisor_client.send_message('1')
+    request_message = RPP.format_message(0)
+    supervisor_client.send_message(request_message)
     supervisor_client.catch_all_messages()
     # supervisor_client.read_all_messages()

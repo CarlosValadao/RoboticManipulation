@@ -33,8 +33,8 @@ Use MAILBOX10 to receive message
 // the robot only response the request from
 // supervisor
 byte parseMessage(string &message);
-bool formatMessage(byte code, string &smessage);
-bool formatDataMessage(float xcoord, float ycoord, string &smessage);
+void formatMessage(byte code, string &smessage);
+void formatDataMessage(float xcoord, float ycoord, string &smessage);
 bool sendMessage(string &message, byte msgType);
 bool readMessage(string &receivedMsg);
 
@@ -65,7 +65,7 @@ void formatDataMessage(float xcoord, float ycoord, string &smessage)
      string sxcoord, sycoord;
      sxcoord = NumToStr(ycoord);
      sycoord = NumToStr(ycoord);
-     smessage = StrCat("3;", sxcoord, sycoord);
+     smessage = StrCat("3;", sxcoord, ";", sycoord);
 }
 
 bool sendMessage(string &message, byte msgType)

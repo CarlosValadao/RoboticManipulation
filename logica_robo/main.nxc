@@ -67,14 +67,22 @@ every one sec
 */
 task sendRobotPosition()
 {
-     while (isRobotBusy)
+     startSendRobotPosition:
+          while (isRobotBusy)
+          {
+               formatDataMessage(cont_x, cont_y, dataMsgToSend);
+               sendMessage(dataMsgToSend, POSITION);
+               cont_x = cont_x + 1;
+               cont_y = cont_y + 2;
+               Wait(1000);
+          }
+     while (isRobotBusy == false)
      {
-           formatDataMessage(cont_x, cont_y, dataMsgToSend);
-           sendMessage(dataMsgToSend, POSITION);
-           cont_x = cont_x + 1;
-           cont_y = cont_y + 2;
-           Wait(1000);
+          ClearScreen();
+          TextOut(0, LCD_LINE1, " Wait Supervisor");
+          TextOut(0, LCD_LINE2, "Command");
      }
+     goto startSendRobotPosition;
 }
 
 /*
@@ -83,23 +91,28 @@ show them on NXT display
 */
 task readSupervisorMessages()
 {
-     byte requestType;
-     string recvdMessage;
-     while (isRobotBusy)
-     {
-          TextOut(0, LCD_LINE1, "Wait for msg...");
-          if (readMessage(recvdMessage))
+     startReadSupervisorMessages:
+          byte requestType;
+          string recvdMessage;
+          while (isRobotBusy)
           {
-               Acquire(messageMutex);
-               requestCode = parseMessage(recvdMessage);
-               requestMsg = recvdMessage;
-               Release(messageMutex);
-               TextOut(0, LCD_LINE2, "received");
-               TextOut(0, LCD_LINE3, requestMsg);
-               handleRequest(requestCode);
+               TextOut(0, LCD_LINE1, "Wait for msg...");
+               if (readMessage(recvdMessage))
+               {
+                    Acquire(messageMutex);
+                    requestCode = parseMessage(recvdMessage);
+                    requestMsg = recvdMessage;
+                    Release(messageMutex);
+                    ClearScreen();
+                    TextOut(0, LCD_LINE1, "Received");
+                    TextOut(0, LCD_LINE2, requestMsg);
+                    handleRequest(requestCode);
+                    Wait(1000);
+               }
+               ClearScreen();
           }
-          ClearScreen();
-     }
+     while (isRobotBusy == false)
+     goto startReadSupervisorMessages;
 }
 
 task main ()
@@ -107,16 +120,22 @@ task main ()
      isRobotBusy = true;
      StartTask(readSupervisorMessages);
      StartTask(sendRobotPosition);
-     StartTask(sendRobotResponse);
 }
 
 
 void handleRequest(byte requestType)
 {
-     Acquire(messageMutex);
-     formatMessage(msgToSend, robotStatus);
-     sendMessage(msgToSend, RESPONSE);
-     Release(messageMutex);
+     if (isRobotBusy == false)
+     {
+          Acquire(messageMutex);
+          formatMessage(robotStatus, msgToSend);
+          sendMessage(msgToSend, RESPONSE);
+          Release(messageMutex);
+     }
+     else if (isRobotBusy && requestType == 1)
+     {
+          PlayTone(2000, 500);
+     }
 }
 
 void GoFoward(byte power, byte seconds) {

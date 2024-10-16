@@ -34,7 +34,7 @@ class RobotPositionThread(QThread):
     def run(self):
         while True:
             # formato 'new_x;new_y'
-            received_messages = supervisor_client.get_received_messages()
+            received_messages = supervisor_client.get_data_msgs()
             if(received_messages):
                 (new_x, new_y) = received_messages[-1]
                 self.position_updated.emit(new_x, new_y)
@@ -129,7 +129,7 @@ class RobotInterface(QWidget):
         if not self.robot_active:
             self.robot_active = True
             self.button.setText('Desativar Robô')
-            supervisor_client.send_message('1')
+            supervisor_client.send_message('1;1')
             self.position_thread.start()
         else:
             self.robot_active = False

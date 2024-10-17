@@ -9,7 +9,7 @@
 
 void girar_esq_while(){
     // Calcula para 90 graus
-    float grau = (DISTANCIA_RODA_CENTRO*360)/((DIAMETRO_RODA/2)*8);
+    float PASSO_DESEJADO = MotorRotationCount(MOTOR_D) + 250;
     while(abs(MotorRotationCount(MOTOR_D)) < grau){
         OnFwdSync(MOTOR_D, 20, -100);
     }

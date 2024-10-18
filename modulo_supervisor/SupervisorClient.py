@@ -19,7 +19,8 @@ class SupervisorClient:
         self._is_nxt_connected: bool = False
         self._nxt_brick: Brick = self.establish_nxt_connection(nxt_bluetooth_mac)
         # As soon as messages are read they're stored here
-        self._recv_data_msg: list[tuple[int]|int] = []
+        self._aux_recv_data_msg: list[tuple[int]] = []
+        self._recv_data_msg: list[tuple[int]] = []
         self._recv_response_msg: list[int] = []
         # mutexes
         self._have_new_data_message: bool = False
@@ -73,7 +74,7 @@ class SupervisorClient:
             self.show_warning_message("It's impossible to send messages\
                                     - there's nothing running on NXT")
     
-    def _read_message(self, mailbox: int, is_data_msg: bool) -> tuple[int]|int:
+    def _read_message(self, mailbox: int, is_data_msg: bool) -> str:
         try:
             (inbox, received_message) = self._nxt_brick.message_read(mailbox, 0, True)
             if is_data_msg:
@@ -82,19 +83,19 @@ class SupervisorClient:
                 self._have_new_response_message = True
             return received_message.decode()
         except DirectProtocolError:
-            return -1
+            return ''
     
     def _read_all_messages(self, mailbox: int, is_data_msg: bool) -> None:
         has_active_program = self._is_running_program_on_nxt()
         while has_active_program:
             received_message = self._read_message(mailbox, is_data_msg)
             data = RPP.parse_message(received_message)
-            if is_data_msg:
+            if self._have_new_data_message:
+                self._recv_data_msg.append(data)
                 self._have_new_data_message = False
+            elif self._have_new_response_message:
                 self._recv_data_msg.append(data)
-            else:
                 self._have_new_response_message = False
-                self._recv_data_msg.append(data)
             print(f'[RECEIVED] -> {datetime_formated()} - {data}')
             has_active_program = self._is_running_program_on_nxt()
         self.show_warning_message("It's impossible to read new messages - \

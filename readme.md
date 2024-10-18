@@ -11,3 +11,9 @@
 - O calculo de deslocamento será feito a cada quanto tempo?
 
 - Qual a velocidade máxima que posso colocar nas rodas do robô sem que aumente muito a chance dele escorregar?
+
+
+
+## Falta
+- Fazer trajetória do robô aparecer
+- Apresentar 

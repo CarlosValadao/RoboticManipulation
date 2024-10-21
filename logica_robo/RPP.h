@@ -15,6 +15,8 @@ Use MAILBOX10 to receive message
 ---------------------
 */ 
 
+#define AWAITING 17
+
 // header
 #define REQUEST  1
 #define RESPONSE 2

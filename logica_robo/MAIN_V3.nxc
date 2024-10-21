@@ -59,7 +59,7 @@ mutex roboMutex;// mutex para alterar os estados do robô
 
 bool RobotInOperation = false;// MUDAR EM CÓDIGO PARA TUDO PEGAR DA STRUCT
 
-byte robotStatus = UCHAR_MAX;
+byte robotStatus = AWAITING;
 byte requestCode = UCHAR_MAX;
 
 string requestMsg, msgToSend = "";
@@ -69,6 +69,7 @@ mutex messageMutex;
 long cont_x = 0;
 long cont_y = 0;
 
+
 /* 
         =============================================
                         MODULOS BLUETOOTH
@@ -76,18 +77,16 @@ long cont_y = 0;
 */
 /// 
 /// @brief 
-/// @param requestType 
-void handleRequest(byte requestType)
+/// @param requestCode 
+void handleRequest(byte requestCode)
 {
-     if (RobotInOperation == false)
+     if (RobotInOperation == false && requestCode == 0)
      {
+          robotStatus = ONGOING;
           Acquire(messageMutex);
           formatMessage(robotStatus, msgToSend);
           sendMessage(msgToSend, RESPONSE);
           Release(messageMutex);
-     }
-     else if (RobotInOperation && requestType == 1)
-     {
           PlayTone(2000, 500);
      }
 }
@@ -104,14 +103,9 @@ task sendRobotPosition()
                sendMessage(dataMsgToSend, POSITION);
                cont_x = cont_x + 1;
                cont_y = cont_y + 2;
-               Wait(1000);
+               Wait(900);
           }
-     while (RobotInOperation == false)
-     {
-          ClearScreen();
-          TextOut(0, LCD_LINE1, " Wait Supervisor");
-          TextOut(0, LCD_LINE2, "Command");
-     }
+     while (!RobotInOperation);
      goto startSendRobotPosition;
 }
 
@@ -141,12 +135,9 @@ task readSupervisorMessages()
                }
                ClearScreen();
           }
-     while (RobotInOperation == false)
+     while (!RobotInOperation);
      goto startReadSupervisorMessages;
 }
-
-
-
 
 
 // set up the sensors connected
@@ -158,12 +149,10 @@ void configSensors() {
 }
 
 
-
-
 //
 void girar_eixo(short turn_pct){
-        RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, turn_pct, true, true);
-    Off(MOTOR_ED);
+     RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, turn_pct, true, true);
+     Off(MOTOR_ED);
 }
 
 
@@ -290,10 +279,12 @@ void sair_base(){
 //         BLOCO DE LÓGICA DE BAIXO NÍVEL
 // ==============================================
 // */
+
 task main ()
 {
-        configSensors();
-     RobotInOperation = true;
+     configSensors();
      StartTask(readSupervisorMessages);
      StartTask(sendRobotPosition);
+     while (!RobotInOperation);
+     // restante do codigo do robo
 }

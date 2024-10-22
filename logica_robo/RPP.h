@@ -50,7 +50,7 @@ byte parseMessage(string &message)
      value = message[2];
      type_b = StrToNum(type);
      value_b = StrToNum(value);
-     if (type_b == REQUEST)
+     if (type_b == 0)
           return value_b;
      else return UCHAR_MAX;
 }

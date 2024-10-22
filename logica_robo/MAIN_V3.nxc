@@ -8,10 +8,10 @@
 #define CLAW      OUT_C
 //
 #define DEFAULT_CLAW_POWER  15
-#define CLOCKWISE 0
-#define COUNTERCLOCKWISE 1
-#define POWER 25
-#define GRAU_PARA_GIRO_90 235
+#define CLOCKWISE           0
+#define COUNTERCLOCKWISE    1
+#define POWER               25
+#define GRAU_PARA_GIRO_90   235
 //
 #define COR_PRETA_LMI 28
 #define COR_PRETA_LMS 40
@@ -83,13 +83,16 @@ void handleRequest(byte requestCodeb)
      if (!RobotInOperation && requestCodeb == 0)
      {
           robotStatus = ONGOING;
+          RobotInOperation = true;
           Acquire(messageMutex);
           formatMessage(robotStatus, msgToSend);
           sendMessage(msgToSend, RESPONSE);
           Release(messageMutex);
           PlayTone(2000, 500);
+          Wait(500);
+          PlayTone(2000, 500);
      }
-     else if (requestCodeb != 0)
+     else if (requestCodeb > 0)
      {
           for (byte i=0; i < 5; i++)
           {
@@ -106,7 +109,10 @@ task sendRobotPosition()
 {
      byte i;
      startSendRobotPosition:
-          for (i = 0; i < 2; i++) PlayTone(3000, 700);
+          for (i = 0; i < 2; i++)
+          {
+               PlayTone(3000, 700);
+          }
           while (RobotInOperation)
           {
                formatDataMessage(cont_x, cont_y, dataMsgToSend);
@@ -130,6 +136,7 @@ task readSupervisorMessages()
           string recvdMessage;
           while (RobotInOperation)
           {
+               ClearScreen();
                TextOut(0, LCD_LINE1, "Wait for msg...");
                if (readMessage(recvdMessage))
                {
@@ -145,7 +152,21 @@ task readSupervisorMessages()
                }
                ClearScreen();
           }
-     while (!RobotInOperation);
+     while (!RobotInOperation)
+     {
+          if (readMessage(recvdMessage))
+          {
+               Acquire(messageMutex);
+               requestCode = parseMessage(recvdMessage);
+               requestMsg = recvdMessage;
+               Release(messageMutex);
+               ClearScreen();
+               TextOut(0, LCD_LINE1, "Received");
+               TextOut(0, LCD_LINE2, requestMsg);
+               handleRequest(requestCode);
+               Wait(1000);    
+          }
+     }
      goto startReadSupervisorMessages;
 }
 
@@ -286,7 +307,7 @@ task main ()
 {
      configSensors();
      StartTask(readSupervisorMessages);
-     StartTask(sendRobotPosition);
-     while (!RobotInOperation);
+     //StartTask(sendRobotPosition);
+     //while (!RobotInOperation);
      // restante do codigo do robo
 }

@@ -22,6 +22,7 @@ COMPLETED: Final = 2
 ONGOING: Final = 3
 
 def parse_message(message: str) -> tuple[int]|int:
+    message = message.replace('\x00', '')
     message_head = message[0]
     message_tail = message[2:]
     if message_head == RESPONSE:

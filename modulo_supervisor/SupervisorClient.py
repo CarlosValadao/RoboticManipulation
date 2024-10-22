@@ -89,10 +89,10 @@ class SupervisorClient:
                 if is_data_msg:
                     with self._msg_data_lock:
                         self._recv_data_msg.append(data)
-                elif self._have_new_response_message:
+                else:
                     with self._msg_data_lock:
                         self._recv_response_msg.append(data)
-            print(f'[RECEIVED] -> {datetime_formated()} - {data}')
+                print(f'[RECEIVED] -> {datetime_formated()} - {data}')
             has_active_program = self._is_running_program_on_nxt()
         self.show_warning_message("It's impossible to read new messages - \
                                 there's nothing running on NXT")
@@ -147,6 +147,6 @@ class SupervisorClient:
     
 if __name__ == '__main__':
     supervisor_client = SupervisorClient(NXT_BLUETOOTH_MAC_ADDRESS)
-    request_message = RPP.format_message(request_code=0)
+    request_message = RPP.format_message(request_code=1)
     supervisor_client.send_message(request_message)
     supervisor_client.catch_all_messages()

@@ -3,7 +3,7 @@ from nxt.brick import Brick
 from nxt.error import DirectProtocolError
 from constants import MAILBOX1, MAILBOX3, MAILBOX10, NXT_BLUETOOTH_MAC_ADDRESS
 import RPP
-from threading import Thread
+from threading import Thread, Lock
 from nxt.locator import BrickNotFoundError
 from nxt.error import DirectProtocolError
 from time import sleep
@@ -11,7 +11,8 @@ from os import name, system
 from Assets import datetime_formated
 
 # By default use MAILBOX1 to send messages
-# and MAILBOX10 do receive/read messages
+# and MAILBOX10 to receive reponse messages
+#     MAILBOX3  to receive data messages
 
 # Manages the communication between the supervisor and the robot over Bluetooth
 class SupervisorClient:
@@ -19,12 +20,10 @@ class SupervisorClient:
         self._is_nxt_connected: bool = False
         self._nxt_brick: Brick = self.establish_nxt_connection(nxt_bluetooth_mac)
         # As soon as messages are read they're stored here
-        self._aux_recv_data_msg: list[tuple[int]] = []
         self._recv_data_msg: list[tuple[int]] = []
         self._recv_response_msg: list[int] = []
         # mutexes
-        self._have_new_data_message: bool = False
-        self._have_new_response_message: bool = False
+        self._msg_data_lock: Lock = Lock()
         self._there_is_running_program_on_nxt: bool = False
     
     # --- Connection Management ---
@@ -74,13 +73,9 @@ class SupervisorClient:
             self.show_warning_message("It's impossible to send messages\
                                     - there's nothing running on NXT")
     
-    def _read_message(self, mailbox: int, is_data_msg: bool) -> str:
+    def _read_message(self, mailbox: int) -> str:
         try:
             (inbox, received_message) = self._nxt_brick.message_read(mailbox, 0, True)
-            if is_data_msg:
-                self._have_new_data_message = True
-            else:
-                self._have_new_response_message = True
             return received_message.decode()
         except DirectProtocolError:
             return ''
@@ -88,14 +83,15 @@ class SupervisorClient:
     def _read_all_messages(self, mailbox: int, is_data_msg: bool) -> None:
         has_active_program = self._is_running_program_on_nxt()
         while has_active_program:
-            received_message = self._read_message(mailbox, is_data_msg)
-            data = RPP.parse_message(received_message)
-            if self._have_new_data_message:
-                self._recv_data_msg.append(data)
-                self._have_new_data_message = False
-            elif self._have_new_response_message:
-                self._recv_data_msg.append(data)
-                self._have_new_response_message = False
+            received_message = self._read_message(mailbox)
+            if received_message:
+                data = RPP.parse_message(received_message)
+                if is_data_msg:
+                    with self._msg_data_lock:
+                        self._recv_data_msg.append(data)
+                elif self._have_new_response_message:
+                    with self._msg_data_lock:
+                        self._recv_response_msg.append(data)
             print(f'[RECEIVED] -> {datetime_formated()} - {data}')
             has_active_program = self._is_running_program_on_nxt()
         self.show_warning_message("It's impossible to read new messages - \
@@ -104,18 +100,16 @@ class SupervisorClient:
         self.close_nxt_connection()
     
     def get_data_msgs(self) -> list[tuple[int]]:
-        if self._recv_data_msg:
+        with self._msg_data_lock:
             temp = self._recv_data_msg.copy()
             self._recv_data_msg = []
-            return temp
-        return []
+        return temp
     
     def get_response_msgs(self) -> list[int]:
-        if self._recv_response_msg:
+        with self._msg_data_lock:
             temp = self._recv_response_msg.copy()
             self._recv_response_msg = []
-            return temp
-        return []
+        return temp
     
     # --- Utilities ---
     
@@ -124,7 +118,7 @@ class SupervisorClient:
     """
     def catch_all_messages(self) -> None:
         Thread(target=self._read_all_messages, kwargs={'mailbox': MAILBOX3, 'is_data_msg': True}).start()
-        Thread(target=self._read_all_messages, kwargs={'mailbox': MAILBOX3, 'is_data_msg': False}).start()
+        Thread(target=self._read_all_messages, kwargs={'mailbox': MAILBOX10, 'is_data_msg': False}).start()
     
     def _is_running_program_on_nxt(self) -> bool:
         try:

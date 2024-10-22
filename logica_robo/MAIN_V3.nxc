@@ -2,10 +2,10 @@
 
 #define DISTANCIA_ENTRE_RODAS 10 // cm
 #define RAIO_RODA 10 // cm
-#define MOTOR_E OUT_A // Motor da esquerda
-#define MOTOR_D OUT_B // Mootor da direita
-#define MOTOR_ED OUT_AB
-#define CLAW        OUT_C
+#define MOTOR_E   OUT_A // Motor da esquerda
+#define MOTOR_D   OUT_B // Mootor da direita
+#define MOTOR_ED  OUT_AB
+#define CLAW      OUT_C
 //
 #define DEFAULT_CLAW_POWER  15
 #define CLOCKWISE 0
@@ -30,7 +30,7 @@
 #define TOUCH_SENSOR_STATE SENSOR_3
 #define LIGHT_SENSOR_STATE SENSOR_2
 //
-void handleRequest(byte requestType);
+void handleRequest(byte requestCodeb);
 void configSensors();
 /*
 -----------------------
@@ -77,10 +77,10 @@ long cont_y = 0;
 */
 /// 
 /// @brief 
-/// @param requestCode 
-void handleRequest(byte requestCode)
+/// @param requestCodeb
+void handleRequest(byte requestCodeb)
 {
-     if (RobotInOperation == false && requestCode == 0)
+     if (!RobotInOperation && requestCodeb == 0)
      {
           robotStatus = ONGOING;
           Acquire(messageMutex);
@@ -89,6 +89,14 @@ void handleRequest(byte requestCode)
           Release(messageMutex);
           PlayTone(2000, 500);
      }
+     else if (requestCodeb != 0)
+     {
+          for (byte i=0; i < 5; i++)
+          {
+              PlayTone(2000, 500);
+              Wait(500);
+          }
+     }
 }
 /*
 Send robot position X and Y coordinates
@@ -96,7 +104,9 @@ every one sec
 */
 task sendRobotPosition()
 {
+     byte i;
      startSendRobotPosition:
+          for (i = 0; i < 2; i++) PlayTone(3000, 700);
           while (RobotInOperation)
           {
                formatDataMessage(cont_x, cont_y, dataMsgToSend);
@@ -263,14 +273,6 @@ void sair_base(){
 // void girar(byte graus){
 
 // }
-
-
-// // --------------------------------------
-// task main(){
-
-
-// }
-
 
 
 

@@ -30,8 +30,10 @@
 #define TOUCH_SENSOR_STATE SENSOR_3
 #define LIGHT_SENSOR_STATE SENSOR_2
 //
-void handleRequest(byte requestCodeb);
-void configSensors();
+void handleSupervisorRequest(byte requestCodeb);
+void treatSupervisorRequest();
+void configureSensors();
+
 /*
 -----------------------
     Global Variables
@@ -78,9 +80,9 @@ long cont_y = 0;
 /// 
 /// @brief 
 /// @param requestCodeb
-void handleRequest(byte requestCodeb)
+void handleSupervisorRequest(byte requestCodeb)
 {
-     if (!RobotInOperation && requestCodeb == 0)
+     if (!RobotInOperation && requestCodeb == GO)
      {
           robotStatus = ONGOING;
           RobotInOperation = true;
@@ -92,7 +94,7 @@ void handleRequest(byte requestCodeb)
           Wait(500);
           PlayTone(2000, 500);
      }
-     else if (requestCodeb > 0)
+     else if (requestCodeb != GO)
      {
           for (byte i=0; i < 5; i++)
           {
@@ -112,13 +114,14 @@ task sendRobotPosition()
           for (i = 0; i < 2; i++)
           {
                PlayTone(3000, 700);
+               Wait(500);
           }
           while (RobotInOperation)
           {
                formatDataMessage(cont_x, cont_y, dataMsgToSend);
                sendMessage(dataMsgToSend, POSITION);
                cont_x = cont_x + 1;
-               cont_y = cont_y + 2;
+               cont_y = cont_y + 1;
                Wait(900);
           }
      while (!RobotInOperation);
@@ -132,51 +135,41 @@ show them on NXT display
 task readSupervisorMessages()
 {
      startReadSupervisorMessages:
-          byte requestType;
-          string recvdMessage;
-          while (RobotInOperation)
+     while (RobotInOperation)
           {
                ClearScreen();
                TextOut(0, LCD_LINE1, "Wait for msg...");
-               if (readMessage(recvdMessage))
-               {
-                    Acquire(messageMutex);
-                    requestCode = parseMessage(recvdMessage);
-                    requestMsg = recvdMessage;
-                    Release(messageMutex);
-                    ClearScreen();
-                    TextOut(0, LCD_LINE1, "Received");
-                    TextOut(0, LCD_LINE2, requestMsg);
-                    handleRequest(requestCode);
-                    Wait(1000);
-               }
-               ClearScreen();
+               treatSupervisorRequest();
           }
-     while (!RobotInOperation)
-     {
-          if (readMessage(recvdMessage))
-          {
-               Acquire(messageMutex);
-               requestCode = parseMessage(recvdMessage);
-               requestMsg = recvdMessage;
-               Release(messageMutex);
-               ClearScreen();
-               TextOut(0, LCD_LINE1, "Received");
-               TextOut(0, LCD_LINE2, requestMsg);
-               handleRequest(requestCode);
-               Wait(1000);    
-          }
-     }
+     while (!RobotInOperation);
      goto startReadSupervisorMessages;
 }
 
 
 // set up the sensors connected
 // to NXT, following init description
-void configSensors() {
+void configureSensors() {
     SetSensorTouch(TOUCH_SENSOR);
     SetSensorUltrasonic(ULTRASONIC_SENSOR);
     SetSensorLight(LIGHT_SENSOR);
+}
+
+void treatSupervisorRequest()
+{
+     byte requestCode;
+     string recvdMessage;
+     if (readMessage(recvdMessage))
+     {
+          ClearScreen();
+          Acquire(messageMutex);
+          requestCode = parseMessage(recvdMessage);
+          requestMsg = recvdMessage;
+          Release(messageMutex);
+          TextOut(0, LCD_LINE1, "Received");
+          TextOut(0, LCD_LINE2, requestMsg);
+          handleSupervisorRequest(requestCode);
+          Wait(1000);
+     }
 }
 
 
@@ -305,9 +298,9 @@ void sair_base(){
 
 task main ()
 {
-     configSensors();
+     configureSensors();
      StartTask(readSupervisorMessages);
-     //StartTask(sendRobotPosition);
-     //while (!RobotInOperation);
+     StartTask(sendRobotPosition);
+     while (!RobotInOperation) treatSupervisorRequest();
      // restante do codigo do robo
 }

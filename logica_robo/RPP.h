@@ -18,19 +18,25 @@ Use MAILBOX10 to receive message
 #define AWAITING 17
 
 // header
+#define REQUEST_S "1"
 #define REQUEST  1
 #define RESPONSE 2
 #define POSITION 3
 
 // request type messages
-#define ACTIVATE 0
-#define STATUS   1
+#define GO 0
 
 // response type messages
 #define SUCCESS   0
 #define ERROR     1
 #define COMPLETED 2
 #define ONGOING   3
+
+// regions
+
+#define BASE   0
+#define STOCK  1
+#define MIDDLE 2
 
 // the robot only response the request from
 // supervisor
@@ -45,12 +51,11 @@ bool readMessage(string &receivedMsg);
 byte parseMessage(string &message)
 {
      string type, value;
-     byte type_b, value_b;
+     byte value_b;
      type = message[0];
      value = message[2];
-     type_b = StrToNum(type);
      value_b = StrToNum(value);
-     if (type_b == 0)
+     if (type == REQUEST_S)
           return value_b;
      else return UCHAR_MAX;
 }

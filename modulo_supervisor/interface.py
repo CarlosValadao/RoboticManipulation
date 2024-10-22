@@ -36,17 +36,20 @@ class RobotPositionThread(QThread):
             # formato 'new_x;new_y'
             received_messages = supervisor_client.get_data_msgs()
             if(received_messages):
-                (new_x, new_y) = received_messages[-1]
-                self.position_updated.emit(new_x, new_y)
+                (new_x, new_y, regiao) = received_messages[-1]
+                self.position_updated.emit(new_x, new_y, regiao)
 
 class RobotArea(QFrame):
     def __init__(self):
         super().__init__()
         self.robot_position = [35, 60]  # posição inicial do robô
+        self.rastro = []  # lista para armazenar o rastro do robô
+        self.setFixedSize(500, 400)  # Definindo um tamanho fixo para a área do robô
 
     def update_robot_position(self, new_position):
         self.robot_position = new_position
-        self.update()  # atualiza a posição do robô
+        self.rastro.append(new_position)  # adiciona a nova posição ao rastro
+        self.update()  # atualiza a área do robô
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -67,11 +70,11 @@ class RobotArea(QFrame):
         painter.drawRect(self.width() - 70, 50, 50, 300)
 
         # desenhar as bancadas
-        square_width = 80
-        square_height = 80
-        offset_x = 150
-        offset_y = 50
-        spacing = 20
+        square_width = 50
+        square_height = 50
+        offset_x = 175
+        offset_y = 75
+        spacing = 50
         
         for row in range(3):
             for col in range(2):
@@ -79,6 +82,11 @@ class RobotArea(QFrame):
                 y = offset_y + row * (square_height + spacing)
                 painter.setPen(Qt.black)
                 painter.drawRect(x, y, square_width, square_height)
+
+        # desenhar o rastro do robô
+        painter.setBrush(QColor(200, 0, 0, 150))  # cor do rastro com transparência
+        for pos in self.rastro:
+            painter.drawEllipse(pos[0], pos[1], 10, 10)  # desenha cada posição do rastro
 
         # desenhar o robô
         painter.setBrush(QColor(255, 0, 0))
@@ -89,7 +97,7 @@ class RobotInterface(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Controle do Robô')
-        self.setGeometry(100, 100, 700, 400)
+        self.setFixedSize(700, 400)  # Definindo um tamanho fixo para a janela principal
 
         # layout principal
         self.main_layout = QHBoxLayout()
@@ -103,6 +111,10 @@ class RobotInterface(QWidget):
         self.button = QPushButton('Ativar Robô', self)
         self.button.clicked.connect(self.toggle_robot)
         self.control_layout.addWidget(self.button)
+
+        # exibe a região do robô
+        self.region_label = QLabel('Região: Base', self)
+        self.control_layout.addWidget(self.region_label)
 
         # exibe as coordenadas do robô
         self.coordinates_label = QLabel('Coordenadas: (150, 150)', self)
@@ -130,14 +142,15 @@ class RobotInterface(QWidget):
             self.robot_active = True
             self.button.setText('Desativar Robô')
             supervisor_client.send_message(request_code=1)
+            self.robot_area.rastro.clear()
             self.position_thread.start()
         else:
             self.robot_active = False
             self.button.setText('Ativar Robô')
-            supervisor_client.send_message('0')
+            supervisor_client.send_message(request_code=0)
             self.position_thread.terminate()
 
-    def update_robot_position(self, new_x, new_y):
+    def update_robot_position(self, new_x, new_y, regiao):
         # limita a posição do robô
         robot_area_width = self.robot_area.width()
         robot_area_height = self.robot_area.height()
@@ -151,6 +164,15 @@ class RobotInterface(QWidget):
 
         # atualiza o campo de coordenadas com a nova posição do robô
         self.coordinates_label.setText(f'Coordenadas: ({new_x}, {new_y})')
+        if regiao == 0:
+            self.region_label.setText('Região: Base')
+        elif regiao == 1:
+            self.region_label.setText('Região: Pátio')
+        elif regiao == 2:
+            self.region_label.setText('Região: Estoque')
+        else:
+            self.region_label.setText('Região: Desconhecida')
+        
 
 
 if __name__ == '__main__':

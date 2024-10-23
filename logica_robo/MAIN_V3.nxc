@@ -173,11 +173,60 @@ void treatSupervisorRequest()
                 MODULOS LÓGICA DO PROBLEMA
         =============================================
 */
+void muda_bussola(short turn_pct){
+	/////// Ao girar para esquerda
+	if(turn_pct == 100){
+		if (robo.orientacao[0]==true){// Se estiver para o NORTE
+		// vai pro oeste
+		robo.orientacao[0]=false;
+		robo.orientacao[1]=true;
+		} else if (robo.orientacao[1]==true){// Se estiver para o OESTE
+		// vai pro sul
+		robo.orientacao[1]=false;
+		robo.orientacao[2]=true;
+		} else if (robo.orientacao[2]==true){// Se estiver para o SUL
+		// vai pro leste
+		robo.orientacao[2]=false;
+		robo.orientacao[3]=true;
+		}
+		else if (robo.orientacao[3]==true){// Se estiver para o LESTE
+		// vai pro norte
+		robo.orientacao[3]=false;
+		robo.orientacao[0]=true;
+		}
+	} 
+	/////// Ao girar para direita
+	else if (turn_pct==-100){
+		orientacao[4];// NORTE - OESTE - SUL - LESTE
+		if (robo.orientacao[0]==true){// Se estiver para o NORTE
+		// vai pro leste
+		robo.orientacao[0]=false;
+		robo.orientacao[3]=true;
+		} else if (robo.orientacao[1]==true){// Se estiver para o OESTE
+		// vai pro norte
+		robo.orientacao[1]=false;
+		robo.orientacao[0]=true;
+		} else if (robo.orientacao[2]==true){// Se estiver para o SUL
+		// vai pro oeste
+		robo.orientacao[2]=false;
+		robo.orientacao[1]=true;
+		}
+		else if (robo.orientacao[3]==true){// Se estiver para o LESTE
+		// vai pro sul
+		robo.orientacao[3]=false;
+		robo.orientacao[2]=true;
+		}
+	}
+}
+
+
 void girar_eixo(short turn_pct){
 	calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
 	RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, turn_pct, true, true);
+	muda_bussola(turn_pct);
 	Off(MOTOR_ED);
 }
+
 void girar_eixo_v2(short turn_pct){
 	calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
 	//
@@ -195,7 +244,9 @@ void girar_eixo_v2(short turn_pct){
 	OnFwd(MOTOR_D, POWER);
 	while (abs(MotorRotationCount(MOTOR_D)) < passo_direito){}
 	Off(MOTOR_D);
+	muda_bussola(turn_pct);
 }
+
 /**
  * Quando control = false, a função é controlada com o módulo que conta passo
  * Quando control = true, a função fica igual  a segue_frente_ate_pare_linha()

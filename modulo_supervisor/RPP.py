@@ -21,6 +21,8 @@ ERROR: Final = 1
 COMPLETED: Final = 2
 ONGOING: Final = 3
 
+GO: Final = 0
+
 def parse_message(message: str) -> tuple[int]|int:
     message = message.replace('\x00', '')
     message_head = message[0]

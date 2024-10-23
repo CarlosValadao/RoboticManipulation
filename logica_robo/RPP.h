@@ -18,7 +18,7 @@ Use MAILBOX10 to receive message
 #define AWAITING 17
 
 // header
-#define REQUEST_S "1"
+#define REQUEST_S '1'
 #define REQUEST  1
 #define RESPONSE 2
 #define POSITION 3
@@ -50,13 +50,10 @@ bool readMessage(string &receivedMsg);
 
 byte parseMessage(string &message)
 {
-     string type, value;
      byte value_b;
-     type = message[0];
-     value = message[2];
-     value_b = StrToNum(value);
-     if (type == REQUEST_S)
-          return value_b;
+     value_b = message[2];
+     value_b = value_b - 48;
+     if (message[0] == REQUEST_S) return value_b;
      else return UCHAR_MAX;
 }
 
@@ -91,8 +88,11 @@ bool sendMessage(string &message, byte msgType)
 
 bool readMessage(string &receivedMsg)
 {
-       if (ReceiveMessage(0, true, receivedMsg) == NO_ERR)
+       if (ReceiveRemoteString(MAILBOX1, true, receivedMsg) == NO_ERR)
+       {
+          receivedMsg = ByteArrayToStr(receivedMsg);
           return true;
+       }
        return false;
 }
 

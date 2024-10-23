@@ -34,7 +34,8 @@ void handleSupervisorRequest(byte requestCodeb);
 void treatSupervisorRequest();
 void configureSensors();
 void calcula_deslocamento();
-
+void grab();
+void drop();
 /*
 -----------------------
     Global Variables
@@ -361,12 +362,25 @@ task odometria(){
 	goto startOdometerCalc;
 }
 
+void grab()
+{
+     RotateMotor(CLAW, 25, 90);
+     Off(CLAW);
+}
 
+void drop()
+{
+     RotateMotor(CLAW, 25, -90);
+     Off(CLAW);
+}
 
 task main ()
 {
     //configureSensors();
-    StartTask(readFirstSupervisorMessage);
+    //StartTask(readFirstSupervisorMessage);
     //StartTask(sendRobotPosition);
     // restante do codigo do robo
+    //grab();
+    //grab();
+    sair_base();
 }

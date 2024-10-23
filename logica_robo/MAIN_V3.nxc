@@ -86,10 +86,10 @@ void handleSupervisorRequest(byte requestCodeb)
      {
           robotStatus = ONGOING;
           RobotInOperation = true;
-          Acquire(messageMutex);
+          //Acquire(messageMutex);
           formatMessage(robotStatus, msgToSend);
           sendMessage(msgToSend, RESPONSE);
-          Release(messageMutex);
+          //Release(messageMutex);
           byte i;
           for (i=0; i<6; i++)
           {
@@ -101,7 +101,7 @@ void handleSupervisorRequest(byte requestCodeb)
      {
           for (byte i=0; i < 5; i++)
           {
-              PlayTone(2000, 500);
+              PlayTone(300, 500);
               Wait(1000);
           }
      }
@@ -148,24 +148,21 @@ void treatSupervisorRequest()
      if (readMessage(recvdMessage))
      {
           //ClearScreen();
-          Acquire(messageMutex);
+          //Acquire(messageMutex);
           requestCode = parseMessage(recvdMessage);
           requestMsg = recvdMessage;
-          Release(messageMutex);
+          //Release(messageMutex);
           TextOut(0, LCD_LINE1, "Received");
           TextOut(0, LCD_LINE2, recvdMessage);
           NumOut(0, LCD_LINE3, requestCode);
           TextOut(0, LCD_LINE4, recvdMessage[0]);
           TextOut(0, LCD_LINE5, recvdMessage[2]);
-          if (recvdMessage[0] == '1') TextOut(0, LCD_LINE8, "É IGUAL A 1");
-          if (recvdMessage[2] == '0') TextOut(0, LCD_LINE7, "É IGUAL A 0");
-          Wait(10000);
+          //if (recvdMessage[0] == '1') TextOut(0, LCD_LINE8, "É IGUAL A 1");
+          //if (recvdMessage[2] == '0') TextOut(0, LCD_LINE7, "É IGUAL A 0");
+          Wait(1000);
           handleSupervisorRequest(requestCode);
      }
 }
-
-
-//
 
 
 /* 
@@ -173,6 +170,7 @@ void treatSupervisorRequest()
                 MODULOS LÓGICA DO PROBLEMA
         =============================================
 */
+/*
 void muda_bussola(short turn_pct){
 	/////// Ao girar para esquerda
 	if(turn_pct == 100){
@@ -218,12 +216,12 @@ void muda_bussola(short turn_pct){
 		}
 	}
 }
-
+*/
 
 void girar_eixo(short turn_pct){
 	calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
 	RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, turn_pct, true, true);
-	muda_bussola(turn_pct);
+	//muda_bussola(turn_pct);
 	Off(MOTOR_ED);
 }
 
@@ -244,7 +242,7 @@ void girar_eixo_v2(short turn_pct){
 	OnFwd(MOTOR_D, POWER);
 	while (abs(MotorRotationCount(MOTOR_D)) < passo_direito){}
 	Off(MOTOR_D);
-	muda_bussola(turn_pct);
+	//muda_bussola(turn_pct);
 }
 
 /**
@@ -308,24 +306,19 @@ void sair_base(){
 Send robot position X and Y coordinates
 every one sec
 */
+// falta adicionar uma variavel de controle
+// para quebrar o laco (com break)
 task sendRobotPosition(){
 	while (1)
      {
-          //??? !!
-          /*for (i = 0; i < 4; i++){
-               PlayTone(3000, 700);
-               Wait(1000);
-          }*/
-          //??? !!
+          Wait(900);
           Acquire(RobotInOperationMutex);
-          while (RobotInOperation){
+          if (RobotInOperation){
                // Chama o mutex para não ler enquanto alguém muda
                Acquire(roboMutex);
                formatDataMessage(robo.vetor_deslocamento[0], robo.vetor_deslocamento[1], dataMsgToSend);
                Release(roboMutex);
-               //
                sendMessage(dataMsgToSend, POSITION);
-               Wait(900);
           }
           Release(RobotInOperationMutex);
      }	
@@ -336,21 +329,19 @@ task sendRobotPosition(){
 Read Supervisor messages and
 show them on NXT display
 */
-task readSupervisorMessages()
+task readFirstSupervisorMessage()
 {
      while (1)
      {
+          ClearScreen();
+          TextOut(5, LCD_LINE1, "Wait for the");
+          TextOut(5, LCD_LINE2, "first msg");
           Acquire(RobotInOperationMutex);
-          if (RobotInOperation){
-               ClearScreen();
-               TextOut(0, LCD_LINE1, "Wait for msg...");
-               treatSupervisorRequest();
-          }
-          else treatSupervisorRequest();
+          treatSupervisorRequest();
+          if (RobotInOperation) break;
           Release(RobotInOperationMutex);
      }
 }
-
 /*
 Calcula a distância Percorrida a cada X tempos
 */
@@ -364,17 +355,18 @@ task odometria(){
 	startOdometerCalc:
 	while (RobotInOperation){
 		calcula_deslocamento();
-		//
 		Wait(100);
 	}
 	while (!RobotInOperation);
 	goto startOdometerCalc;
 }
 
+
+
 task main ()
 {
     //configureSensors();
-    StartTask(readSupervisorMessages);
+    StartTask(readFirstSupervisorMessage);
     //StartTask(sendRobotPosition);
     // restante do codigo do robo
 }

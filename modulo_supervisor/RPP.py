@@ -23,6 +23,10 @@ ONGOING: Final = 3
 
 GO: Final = 0
 
+BASE: Final = 0
+STOCK: Final = 1
+MIDDLE: Final = 2
+
 def parse_message(message: str) -> tuple[int]|int:
     message = message.replace('\x00', '')
     message_head = message[0]

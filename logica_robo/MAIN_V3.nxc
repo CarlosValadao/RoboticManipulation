@@ -11,7 +11,7 @@
 #define CLOCKWISE           0
 #define COUNTERCLOCKWISE    1
 #define POWER               25
-#define GRAU_PARA_GIRO_90   235
+#define GRAU_PARA_GIRO_90   242
 //
 #define COR_PRETA_LMI 28
 #define COR_PRETA_LMS 40
@@ -26,14 +26,20 @@
 #define LIGHT_SENSOR       IN_4
 //
 #define PASSO_BUSCA 250 // Quantos graus ele avança antes de girar parea procurar uma saída
-
+//
 #define TOUCH_SENSOR_STATE SENSOR_3
 #define LIGHT_SENSOR_STATE SENSOR_2
-//
+/*
+-----------------------
+      Prototypes
+-----------------------
+*/
 void handleSupervisorRequest(byte requestCodeb);
 void treatSupervisorRequest();
 void configureSensors();
 void calcula_deslocamento();
+void girar_eixo(short turn_pct);
+void muda_bussola(short turn_pct);
 void grab();
 void drop();
 /*
@@ -41,27 +47,15 @@ void drop();
     Global Variables
 -----------------------
 */
-
 //enum REGIAO { BASE, BANCADA, PATIO, ESTOQUE };// PATIO é a região onde tem várias bancadas
-
-struct Robot {
-	// Indica se o robô está disponivel na base
-	bool RobotInOperation;// começa na base
-	short regiao; // 0-> BASE, 1->BANCADA, 2->PATIO, 3->ESTOQUE
-	// Vetor que diz a orientação atual do robô (começa virado para o norte)
-	bool orientacao[4];// NORTE - OESTE - SUL - LESTE
-	// Vetor deslocamento do robô
-	// O referencial (X,Y) é relativo a posição inicial, que deverá ser na fita especificada
-	long vetor_deslocamento[2];// = {0, 0};//Indica o deslocamento em torno de X e Y respectivamente
-	long grau_anterior_RE;// = MotorRotationCount(MOTOR_A);// Roda esquerda
-    long grau_anterior_RD;// Roda direita
-	bool em_rotacao;// = false;
-};
-
-Robot robo;// N�o pode inicializar dentro da main, as tasks n�o v�o reconhecer de forma f�cil
+long gr_ant_RE;// = MotorRotationCount(MOTOR_A);// Roda esquerda
+long gr_ant_RD;// Roda direita -> grau da roda direita
+short regiao; // 0-> BASE, 1->BANCADA, 2->PATIO, 3->ESTOQUE
+bool orientacao[4];// Indica a orientação do robo -> NORTE - OESTE - SUL - LESTE
+long deslocamento[2];//Indica o deslocamento em torno de X e Y respectivamente
 mutex roboMutex;// mutex para alterar os estados do robô
 
-bool RobotInOperation = false;// MUDAR EM CÓDIGO PARA TUDO PEGAR DA STRUCT
+bool RobotInOperation = false;// Indica se o robô está disponivel na base
 mutex RobotInOperationMutex;
 
 byte robotStatus = AWAITING;
@@ -108,40 +102,6 @@ void handleSupervisorRequest(byte requestCodeb)
      }
 }
 
-
-void calcula_deslocamento(){
-   // Pego o grau atual
-   long RE_Atual = MotorRotationCount(MOTOR_E);
-   long RD_Atual = MotorRotationCount(MOTOR_D);
-   // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
-   Acquire(roboMutex);
-   long desloc_grau = ((RE_Atual - robo.grau_anterior_RE) + (RD_Atual - robo.grau_anterior_RD))/2;
-   float desloc_cm = 2*PI*desloc_grau; 
-   // Atualizo o grau anterior do robo
-   robo.grau_anterior_RE = RE_Atual;
-   robo.grau_anterior_RD = RD_Atual;
-   // Atualizo a distancia do proprio robo
-    if (robo.orientacao[0]==true){// Se estiver para o NORTE
-       robo.vetor_deslocamento[1] = robo.vetor_deslocamento[1] + desloc_cm;
-    } else if (robo.orientacao[1]==true){// Se estiver para o OESTE
-       robo.vetor_deslocamento[1] = robo.vetor_deslocamento[0] - desloc_cm;
-    } else if (robo.orientacao[2]==true){// Se estiver para o SUL
-       robo.vetor_deslocamento[1] = robo.vetor_deslocamento[1] - desloc_cm;
-    } else if (robo.orientacao[3]==true){// Se estiver para o LESTE
-       robo.vetor_deslocamento[1] = robo.vetor_deslocamento[0] + desloc_cm;
-    }
-	Release(roboMutex);
-}
-
-
-// set up the sensors connected
-// to NXT, following init description
-void configureSensors() {
-    SetSensorTouch(TOUCH_SENSOR);
-    SetSensorUltrasonic(ULTRASONIC_SENSOR);
-    SetSensorLight(LIGHT_SENSOR);
-}
-
 void treatSupervisorRequest()
 {
      byte requestCode;
@@ -171,63 +131,17 @@ void treatSupervisorRequest()
                 MODULOS LÓGICA DO PROBLEMA
         =============================================
 */
-/*
-void muda_bussola(short turn_pct){
-	/////// Ao girar para esquerda
-	if(turn_pct == 100){
-		if (robo.orientacao[0]==true){// Se estiver para o NORTE
-		// vai pro oeste
-		robo.orientacao[0]=false;
-		robo.orientacao[1]=true;
-		} else if (robo.orientacao[1]==true){// Se estiver para o OESTE
-		// vai pro sul
-		robo.orientacao[1]=false;
-		robo.orientacao[2]=true;
-		} else if (robo.orientacao[2]==true){// Se estiver para o SUL
-		// vai pro leste
-		robo.orientacao[2]=false;
-		robo.orientacao[3]=true;
-		}
-		else if (robo.orientacao[3]==true){// Se estiver para o LESTE
-		// vai pro norte
-		robo.orientacao[3]=false;
-		robo.orientacao[0]=true;
-		}
-	} 
-	/////// Ao girar para direita
-	else if (turn_pct==-100){
-		orientacao[4];// NORTE - OESTE - SUL - LESTE
-		if (robo.orientacao[0]==true){// Se estiver para o NORTE
-		// vai pro leste
-		robo.orientacao[0]=false;
-		robo.orientacao[3]=true;
-		} else if (robo.orientacao[1]==true){// Se estiver para o OESTE
-		// vai pro norte
-		robo.orientacao[1]=false;
-		robo.orientacao[0]=true;
-		} else if (robo.orientacao[2]==true){// Se estiver para o SUL
-		// vai pro oeste
-		robo.orientacao[2]=false;
-		robo.orientacao[1]=true;
-		}
-		else if (robo.orientacao[3]==true){// Se estiver para o LESTE
-		// vai pro sul
-		robo.orientacao[3]=false;
-		robo.orientacao[2]=true;
-		}
-	}
+// set up the sensors connected
+// to NXT, following init description
+void configureSensors() {
+    SetSensorTouch(TOUCH_SENSOR);
+    SetSensorUltrasonic(ULTRASONIC_SENSOR);
+    SetSensorLight(LIGHT_SENSOR);
 }
-*/
 
-void girar_eixo(short turn_pct){
-	calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
-	RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, turn_pct, true, true);
-	//muda_bussola(turn_pct);
-	Off(MOTOR_ED);
-}
 
 void girar_eixo_v2(short turn_pct){
-	calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
 	//
 	long passo_esquerdo = abs(MotorRotationCount(MOTOR_E)) + GRAU_PARA_GIRO_90;
 	long passo_direito = abs(MotorRotationCount(MOTOR_D)) + GRAU_PARA_GIRO_90;
@@ -243,7 +157,7 @@ void girar_eixo_v2(short turn_pct){
 	OnFwd(MOTOR_D, POWER);
 	while (abs(MotorRotationCount(MOTOR_D)) < passo_direito){}
 	Off(MOTOR_D);
-	//muda_bussola(turn_pct);
+	muda_bussola(turn_pct);
 }
 
 /**
@@ -252,11 +166,13 @@ void girar_eixo_v2(short turn_pct){
  */
 bool segue_frente(bool control){
 	// Calcula qual deverá ser o grau que devo ir
-    long passo_requerido = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;
+    long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
 	// Se ainda não deu o angulo que preciso, nem toquei na parede e nem achei a linha preta, eu continuo em frente
     OnFwdSync(MOTOR_ED, POWER, 0);
-    while(((abs(MotorRotationCount(MOTOR_D)) < passo_requerido) || control) && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
-    }
+    while(((abs(MotorRotationCount(MOTOR_D)) < passo_r) || control) && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS)){
+    //while(((abs(MotorRotationCount(MOTOR_D)) < passo_r) || control) && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
+	//OnFwdSync(MOTOR_ED, POWER, 0);
+	}
     Off(MOTOR_ED);
 	// Após sair do while, preciso identificar o motivo. Verifico se foi por ter chegado no final de curso
 	if ((Sensor(TOUCH_OUT)) || (Sensor(LIGHT_OUT) >= COR_PRETA_LMI && Sensor(LIGHT_OUT) <= COR_PRETA_LMS)){
@@ -281,9 +197,9 @@ void sair_base(){
 			//Wait(200);
 			Off(MOTOR_ED);
 			girar_eixo(100);//90 graus para esquerda
-		} else{ // Se parei de seguir em frente e não era fim de curso, significa que achei um prata
-			break;
-		}
+		} //else{ // Se parei de seguir em frente e não era fim de curso, significa que achei um prata
+			//break;
+		//}
 
 		fim_de_curso = segue_frente(false);//segue em frente por 100 graus (verifica se está em uma parede ou linha)
 		if (fim_de_curso == true){
@@ -317,7 +233,7 @@ task sendRobotPosition(){
           if (RobotInOperation){
                // Chama o mutex para não ler enquanto alguém muda
                Acquire(roboMutex);
-               formatDataMessage(robo.vetor_deslocamento[0], robo.vetor_deslocamento[1], dataMsgToSend);
+               formatDataMessage(deslocamento[0], deslocamento[1], dataMsgToSend);
                Release(roboMutex);
                sendMessage(dataMsgToSend, POSITION);
           }
@@ -355,36 +271,124 @@ task odometria(){
 
 	startOdometerCalc:
 	while (RobotInOperation){
-		calcula_deslocamento();
+		//calcula_deslocamento();
 		Wait(100);
 	}
 	while (!RobotInOperation);
 	goto startOdometerCalc;
 }
 
-void grab()
-{
+void grab(){
      RotateMotor(CLAW, 25, 90);
      Off(CLAW);
 }
 
-void drop()
-{
+void drop(){
      RotateMotor(CLAW, 25, -90);
      Off(CLAW);
 }
 
-task main ()
-{
-    //configureSensors();
+void muda_bussola(short turn_pct){
+	Acquire(roboMutex);
+	/////// Ao girar para esquerda
+	if(turn_pct == 100){
+		if (orientacao[0]==true){// Se estiver para o NORTE
+			// vai pro oeste
+			orientacao[0]=false;
+			orientacao[1]=true;
+		} else if (orientacao[1]==true){// Se estiver para o OESTE
+			// vai pro sul
+			orientacao[1]=false;
+			orientacao[2]=true;
+		} else if (orientacao[2]==true){// Se estiver para o SUL
+			// vai pro leste
+			orientacao[2]=false;
+			orientacao[3]=true;
+		}
+		else if (orientacao[3]==true){// Se estiver para o LESTE
+			// vai pro norte
+			orientacao[3]=false;
+			orientacao[0]=true;
+		}
+	} 
+	/////// Ao girar para direita
+	else if (turn_pct==-100){
+		if (orientacao[0]==true){// Se estiver para o NORTE
+			// vai pro leste
+			orientacao[0]=false;
+			orientacao[3]=true;
+		} else if (orientacao[1]==true){// Se estiver para o OESTE
+			// vai pro norte
+			orientacao[1]=false;
+			orientacao[0]=true;
+		} else if (orientacao[2]==true){// Se estiver para o SUL
+			// vai pro oeste
+			orientacao[2]=false;
+			orientacao[1]=true;
+		}
+		else if (orientacao[3]==true){// Se estiver para o LESTE
+			// vai pro sul
+			orientacao[3]=false;
+			orientacao[2]=true;
+		}
+	}
+	Release(roboMutex);
+}
+
+void calcula_deslocamento(){
+   // Pego o grau atual
+   long RE_Atual = MotorRotationCount(MOTOR_E);
+   long RD_Atual = MotorRotationCount(MOTOR_D);
+   // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
+   Acquire(roboMutex);
+   long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;
+   long desloc_cm = 2*PI*desloc_grau; 
+   // Atualizo o grau anterior do robo
+  gr_ant_RE = RE_Atual;
+  gr_ant_RD = RD_Atual;
+   
+   // Atualizo a distancia do proprio robo
+   //bool aux = ;
+   //TextOut(5, LCD_LINE1, NumToStr(aux));
+    if (orientacao[0] == true){// Se estiver para o NORTE
+       deslocamento[1] = deslocamento[1] + desloc_cm;
+    } else if (orientacao[1]==true){// Se estiver para o OESTE
+       deslocamento[0] = deslocamento[0] - desloc_cm;
+    } else if (orientacao[2]==true){// Se estiver para o SUL
+       deslocamento[1] = deslocamento[1] - desloc_cm;
+    } else if (orientacao[3]==true){// Se estiver para o LESTE
+       deslocamento[0] = deslocamento[0] + desloc_cm;
+    }//*/
+    
+	Release(roboMutex);
+}
+
+void girar_eixo(short turn_pct){
+	calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, turn_pct, true, true);
+	muda_bussola(turn_pct);
+	Off(MOTOR_ED);
+}
+
+
+task main (){
+   regiao = 0;
+   //
+   orientacao[0] = true;// Começa voltado pro norte do mapa
+   orientacao[0] = false;
+   orientacao[0] = false;
+   orientacao[0] = false;
+   //
+   deslocamento[0] = 0;
+   deslocamento[1] = 0;
+   //
+   gr_ant_RE = MotorRotationCount(MOTOR_E);
+   gr_ant_RD = MotorRotationCount(MOTOR_D);
+    configureSensors();
     //StartTask(readFirstSupervisorMessage);
     //StartTask(sendRobotPosition);
     // restante do codigo do robo
     //grab();
     //grab();
-    //sair_base();
-    SetSensorLight(S4, false);
-    while (true)
-    {
-    }
+    sair_base();
 }

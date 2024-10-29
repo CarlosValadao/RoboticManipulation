@@ -29,15 +29,16 @@ def checkArea(y):
 
 
 class RobotPositionThread(QThread):
-    position_updated = pyqtSignal(int, int)
+    position_updated = pyqtSignal(int, int, int)
 
     def run(self):
         while True:
             # formato 'new_x;new_y'
             received_messages = supervisor_client.get_data_msgs()
             if(received_messages):
-                for i in received_messages:
-                    (new_x, new_y, regiao) = received_messages[i]
+                for i in range(len(received_messages)):
+                    (new_x, new_y) = received_messages[i]
+                    regiao = 0
                     self.position_updated.emit(new_x, new_y, regiao)
 
 class RobotArea(QFrame):
@@ -142,13 +143,13 @@ class RobotInterface(QWidget):
         if not self.robot_active:
             self.robot_active = True
             self.button.setText('Desativar Robô')
-            supervisor_client.send_message(request_code=1)
+            supervisor_client.send_message(request_code=0)
             self.robot_area.rastro.clear()
             self.position_thread.start()
         else:
             self.robot_active = False
             self.button.setText('Ativar Robô')
-            supervisor_client.send_message(request_code=0)
+            supervisor_client.send_message(request_code=1)
             self.position_thread.terminate()
 
     def update_robot_position(self, new_x, new_y, regiao):

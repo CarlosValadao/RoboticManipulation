@@ -84,6 +84,7 @@ class SupervisorClient:
         has_active_program = self._is_running_program_on_nxt()
         while has_active_program:
             received_message = self._read_message(mailbox)
+            #print(f'MENSAGEM RECEBIDA -> {received_message}')
             if received_message:
                 data = RPP.parse_message(received_message)
                 if is_data_msg:
@@ -148,5 +149,5 @@ class SupervisorClient:
 if __name__ == '__main__':
     supervisor_client = SupervisorClient(NXT_BLUETOOTH_MAC_ADDRESS)
     supervisor_client.send_message(request_code=RPP.GO)
-    #supervisor_client.catch_all_messages()
-    supervisor_client.close_nxt_connection()
+    supervisor_client.catch_all_messages()
+    #supervisor_client.close_nxt_connection()

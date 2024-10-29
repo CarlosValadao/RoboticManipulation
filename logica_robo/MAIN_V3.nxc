@@ -86,9 +86,9 @@ void handleSupervisorRequest(byte requestCodeb)
           sendMessage(msgToSend, RESPONSE);
           //Release(messageMutex);
           byte i;
-          for (i=0; i<6; i++)
+          for (i=0; i<2; i++)
           {
-               PlayTone(2000, 500);
+               PlayTone(2000, 200);
                Wait(1000);
           }
      }
@@ -96,7 +96,7 @@ void handleSupervisorRequest(byte requestCodeb)
      {
           for (byte i=0; i < 5; i++)
           {
-              PlayTone(300, 500);
+              PlayTone(300, 200);
               Wait(1000);
           }
      }
@@ -120,7 +120,7 @@ void treatSupervisorRequest()
           TextOut(0, LCD_LINE5, recvdMessage[2]);
           //if (recvdMessage[0] == '1') TextOut(0, LCD_LINE8, "É IGUAL A 1");
           //if (recvdMessage[2] == '0') TextOut(0, LCD_LINE7, "É IGUAL A 0");
-          Wait(1000);
+          //Wait(1000);
           handleSupervisorRequest(requestCode);
      }
 }
@@ -168,7 +168,8 @@ bool segue_frente(bool control){
 	// Calcula qual deverá ser o grau que devo ir
     long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
 	// Se ainda não deu o angulo que preciso, nem toquei na parede e nem achei a linha preta, eu continuo em frente
-    OnFwdSync(MOTOR_ED, POWER, 0);
+    //OnFwdSync(MOTOR_ED, POWER, 0);
+    OnRevSync(MOTOR_ED, POWER, 0);
     while(((abs(MotorRotationCount(MOTOR_D)) < passo_r) || control) && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS)){
     //while(((abs(MotorRotationCount(MOTOR_D)) < passo_r) || control) && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
 	//OnFwdSync(MOTOR_ED, POWER, 0);
@@ -187,7 +188,8 @@ bool segue_frente(bool control){
 void sair_base(){
 	// Enquanto não achar o prata
 	bool fim_de_curso = false;
-	girar_eixo(-100);//90 para direita
+	//girar_eixo(-100);//90 para direita
+     girar_eixo(100);
 	while ( Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS) {
 		fim_de_curso = segue_frente(true);// era segue_frente_ate_pare_linha() segue em frente até achar uma parede ou linha (verifica se está em uma parede ou linha)
 		if (fim_de_curso == true){
@@ -196,7 +198,8 @@ void sair_base(){
 			//OnRevReg(MOTOR_ED, POWER, 2);
 			//Wait(200);
 			Off(MOTOR_ED);
-			girar_eixo(100);//90 graus para esquerda
+			//girar_eixo(100);//90 graus para esquerda
+			girar_eixo(-100);//90 graus para esquerda
 		} //else{ // Se parei de seguir em frente e não era fim de curso, significa que achei um prata
 			//break;
 		//}
@@ -204,14 +207,17 @@ void sair_base(){
 		fim_de_curso = segue_frente(false);//segue em frente por 100 graus (verifica se está em uma parede ou linha)
 		if (fim_de_curso == true){
 			// dá uma ré
-			RotateMotorEx(MOTOR_ED, POWER, -PASSO_BUSCA, 0, true, true);
+			//RotateMotorEx(MOTOR_ED, POWER, -PASSO_BUSCA, 0, true, true);
+			RotateMotorEx(MOTOR_ED, POWER, PASSO_BUSCA, 0, true, true);
 			//OnRevReg(MOTOR_ED, POWER, 2);
 			//Wait(200);
 			Off(MOTOR_ED);
 			// Gira
-			girar_eixo(100);//90 graus para esquerda
+			// girar_eixo(100);//90 graus para esquerda
+			girar_eixo(-100);//90 graus para esquerda
 		} else{
-			girar_eixo(-100);//90 para direita
+			// girar_eixo(-100);//90 para direita
+			girar_eixo(100);//90 para direita
 		}
 	}
 	// Se achei o prata eu tomo minhas ações para sair daqui
@@ -227,19 +233,22 @@ every one sec
 // para quebrar o laco (com break)
 task sendRobotPosition(){
 	while (1)
-     {
+     {    ClearScreen();
+          NumOut(0, LCD_LINE1, deslocamento[0]);
+          NumOut(0, LCD_LINE2, deslocamento[1]);
           Wait(900);
           Acquire(RobotInOperationMutex);
           if (RobotInOperation){
                // Chama o mutex para não ler enquanto alguém muda
                Acquire(roboMutex);
                formatDataMessage(deslocamento[0], deslocamento[1], dataMsgToSend);
+               deslocamento[0] = deslocamento[0] + 1;
+               deslocamento[1] = deslocamento[1] + 2;
                Release(roboMutex);
                sendMessage(dataMsgToSend, POSITION);
           }
           Release(RobotInOperationMutex);
      }	
-     
 }
 
 /*
@@ -255,7 +264,11 @@ task readFirstSupervisorMessage()
           TextOut(5, LCD_LINE2, "first msg");
           Acquire(RobotInOperationMutex);
           treatSupervisorRequest();
-          if (RobotInOperation) break;
+          if (RobotInOperation)
+          {
+               Release(RobotInOperationMutex);
+               break;
+          }
           Release(RobotInOperationMutex);
      }
 }
@@ -385,10 +398,13 @@ task main (){
    gr_ant_RE = MotorRotationCount(MOTOR_E);
    gr_ant_RD = MotorRotationCount(MOTOR_D);
     configureSensors();
+    //RobotInOperation = true;
     //StartTask(readFirstSupervisorMessage);
     //StartTask(sendRobotPosition);
     // restante do codigo do robo
     //grab();
     //grab();
     sair_base();
+    //OnRevSync(OUT_BC, 50, 0);
+    //Wait(6000);
 }

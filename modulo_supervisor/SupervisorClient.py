@@ -84,6 +84,7 @@ class SupervisorClient:
         has_active_program = self._is_running_program_on_nxt()
         while has_active_program:
             received_message = self._read_message(mailbox)
+            #print(f'MENSAGEM RECEBIDA -> {received_message}')
             if received_message:
                 data = RPP.parse_message(received_message)
                 if is_data_msg:

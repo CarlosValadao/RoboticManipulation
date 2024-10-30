@@ -89,9 +89,9 @@ void handleSupervisorRequest(byte requestCodeb)
           sendMessage(msgToSend, RESPONSE);
           //Release(messageMutex);
           byte i;
-          for (i=0; i<6; i++)
+          for (i=0; i<2; i++)
           {
-               PlayTone(2000, 500);
+               PlayTone(2000, 200);
                Wait(1000);
           }
      }
@@ -99,7 +99,7 @@ void handleSupervisorRequest(byte requestCodeb)
      {
           for (byte i=0; i < 5; i++)
           {
-              PlayTone(300, 500);
+              PlayTone(300, 200);
               Wait(1000);
           }
      }
@@ -124,7 +124,7 @@ void treatSupervisorRequest()
           TextOut(0, LCD_LINE5, recvdMessage[2]);
           //if (recvdMessage[0] == '1') TextOut(0, LCD_LINE8, "É IGUAL A 1");
           //if (recvdMessage[2] == '0') TextOut(0, LCD_LINE7, "É IGUAL A 0");
-          Wait(1000);
+          //Wait(1000);
           handleSupervisorRequest(requestCode);
      }
 }
@@ -215,7 +215,9 @@ every one sec
 // para quebrar o laco (com break)
 task sendRobotPosition(){
 	while (1)
-     {
+     {    ClearScreen();
+          NumOut(0, LCD_LINE1, deslocamento[0]);
+          NumOut(0, LCD_LINE2, deslocamento[1]);
           Wait(900);
           Acquire(RobotInOperationMutex);
           if (RobotInOperation){
@@ -243,7 +245,11 @@ task readFirstSupervisorMessage()
           TextOut(5, LCD_LINE2, "first msg");
           Acquire(RobotInOperationMutex);
           treatSupervisorRequest();
-          if (RobotInOperation) break;
+          if (RobotInOperation)
+          {
+               Release(RobotInOperationMutex);
+               break;
+          }
           Release(RobotInOperationMutex);
      }
 }

@@ -20,7 +20,7 @@
 //
 #define LIGHT_OUT S4
 #define TOUCH_OUT S3
-#define ULTRASONIC_OUT S2 
+#define ULTRASONIC_OUT S2
 #define ULTRASONIC_SENSOR  IN_2
 #define TOUCH_SENSOR       IN_3
 #define LIGHT_SENSOR       IN_4
@@ -50,11 +50,14 @@ void drop();
 //enum REGIAO { BASE, BANCADA, PATIO, ESTOQUE };// PATIO é a região onde tem várias bancadas
 long gr_ant_RE;// = MotorRotationCount(MOTOR_A);// Roda esquerda
 long gr_ant_RD;// Roda direita -> grau da roda direita
-short regiao; // 0-> BASE, 1->BANCADA, 2->PATIO, 3->ESTOQUE
-bool orientacao[4];// Indica a orientação do robo -> NORTE - OESTE - SUL - LESTE
-long deslocamento[2];//Indica o deslocamento em torno de X e Y respectivamente
-mutex roboMutex;// mutex para alterar os estados do robô
+mutex mutexRoda;// mutex para alterar os estados do robô
 
+int orientacao;// Indica a orientação do robo -> (90)NORTE - (180)OESTE - (270)SUL - (0)LESTE
+long deslocamento[2];//Indica o deslocamento em torno de X e Y respectivamente
+mutex mutexDeslocamento;// mutex para alterar os estados do robô
+
+short regiao; // 0-> BASE, 1->BANCADA, 2->MEIO, 3->ESTOQUE
+byte status;
 bool RobotInOperation = false;// Indica se o robô está disponivel na base
 mutex RobotInOperationMutex;
 
@@ -67,13 +70,13 @@ mutex messageMutex;
 
 
 
-/* 
+
+/*
         =============================================
                         MODULOS BLUETOOTH
         =============================================
 */
-/// 
-/// @brief 
+/// @brief
 /// @param requestCodeb
 void handleSupervisorRequest(byte requestCodeb)
 {
@@ -102,6 +105,7 @@ void handleSupervisorRequest(byte requestCodeb)
      }
 }
 
+
 void treatSupervisorRequest()
 {
      byte requestCode;
@@ -126,13 +130,11 @@ void treatSupervisorRequest()
 }
 
 
-/* 
+/*
         =============================================
                 MODULOS LÓGICA DO PROBLEMA
         =============================================
 */
-// set up the sensors connected
-// to NXT, following init description
 void configureSensors() {
     SetSensorTouch(TOUCH_SENSOR);
     SetSensorUltrasonic(ULTRASONIC_SENSOR);
@@ -160,69 +162,49 @@ void girar_eixo_v2(short turn_pct){
 	muda_bussola(turn_pct);
 }
 
-/**
- * Quando control = false, a função é controlada com o módulo que conta passo
- * Quando control = true, a função fica igual  a segue_frente_ate_pare_linha()
- */
-bool segue_frente(bool control){
-	// Calcula qual deverá ser o grau que devo ir
-    long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
-	// Se ainda não deu o angulo que preciso, nem toquei na parede e nem achei a linha preta, eu continuo em frente
-    //OnFwdSync(MOTOR_ED, POWER, 0);
-    OnRevSync(MOTOR_ED, POWER, 0);
-    while(((abs(MotorRotationCount(MOTOR_D)) < passo_r) || control) && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS)){
-    //while(((abs(MotorRotationCount(MOTOR_D)) < passo_r) || control) && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
-	//OnFwdSync(MOTOR_ED, POWER, 0);
-	}
-    Off(MOTOR_ED);
-	// Após sair do while, preciso identificar o motivo. Verifico se foi por ter chegado no final de curso
-	if ((Sensor(TOUCH_OUT)) || (Sensor(LIGHT_OUT) >= COR_PRETA_LMI && Sensor(LIGHT_OUT) <= COR_PRETA_LMS)){
+bool fim_de_curso(){
+	// Se o sensor de toque foi acionado ou se estou lendo um valor que está no intervalo da cor preta
+	if ( Sensor(TOUCH_SENSOR) || (Sensor(LIGHT_OUT) > COR_PRETA_LMI && Sensor(LIGHT_OUT) < COR_PRETA_LMS)){
 		return true;
 	}
-	else{
-		return false;
-	}
+	return false;
 }
 
+void segue_frente(bool control){
+	long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
+	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
+	OnRevSync(MOTOR_ED, POWER, 0);
+	while( ( (abs(MotorRotationCount(MOTOR_D)) < passo_r) || (!control))  && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
+	}
+	Off(MOTOR_ED);
+}
 
 void sair_base(){
-	// Enquanto não achar o prata
-	bool fim_de_curso = false;
-	//girar_eixo(-100);//90 para direita
-     girar_eixo(100);
-	while ( Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS) {
-		fim_de_curso = segue_frente(true);// era segue_frente_ate_pare_linha() segue em frente até achar uma parede ou linha (verifica se está em uma parede ou linha)
-		if (fim_de_curso == true){
-			// dá uma ré
-			RotateMotorEx(MOTOR_ED, POWER, -PASSO_BUSCA, 0, true, true);
-			//OnRevReg(MOTOR_ED, POWER, 2);
-			//Wait(200);
+	girar_eixo(100);// Giro para direita
+	while (true){
+		// Se estou vendo a porta, encerro a busca
+		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
+			break;
+		}
+		// Se estou no fim de curso
+		if (fim_de_curso()){
+			//--- dou ré e giro esquerda
+			OnFwd(MOTOR_ED, POWER);
 			Off(MOTOR_ED);
-			//girar_eixo(100);//90 graus para esquerda
-			girar_eixo(-100);//90 graus para esquerda
-		} //else{ // Se parei de seguir em frente e não era fim de curso, significa que achei um prata
-			//break;
-		//}
-
-		fim_de_curso = segue_frente(false);//segue em frente por 100 graus (verifica se está em uma parede ou linha)
-		if (fim_de_curso == true){
-			// dá uma ré
-			//RotateMotorEx(MOTOR_ED, POWER, -PASSO_BUSCA, 0, true, true);
-			RotateMotorEx(MOTOR_ED, POWER, PASSO_BUSCA, 0, true, true);
-			//OnRevReg(MOTOR_ED, POWER, 2);
-			//Wait(200);
-			Off(MOTOR_ED);
-			// Gira
-			// girar_eixo(100);//90 graus para esquerda
-			girar_eixo(-100);//90 graus para esquerda
-		} else{
-			// girar_eixo(-100);//90 para direita
-			girar_eixo(100);//90 para direita
+			girar_eixo(100);
+			// ando frente e giro direita
+			segue_frente(true);// sigo em frente controlado pelo passo
+			if (!fim_de_curso()){
+				girar_eixo(100);
+			}
+		}
+		else{
+			// sigo em frente indefinido
+			segue_frente(false);
 		}
 	}
-	// Se achei o prata eu tomo minhas ações para sair daqui
-	//DAR UM PRINT AQUI SÓ DE TESTE
 }
+
 
 
 /*
@@ -240,15 +222,14 @@ task sendRobotPosition(){
           Acquire(RobotInOperationMutex);
           if (RobotInOperation){
                // Chama o mutex para não ler enquanto alguém muda
-               Acquire(roboMutex);
+               Acquire(mutexDeslocamento);
                formatDataMessage(deslocamento[0], deslocamento[1], dataMsgToSend);
-               deslocamento[0] = deslocamento[0] + 1;
-               deslocamento[1] = deslocamento[1] + 2;
-               Release(roboMutex);
+               Release(mutexDeslocamento);
                sendMessage(dataMsgToSend, POSITION);
           }
           Release(RobotInOperationMutex);
-     }	
+     }
+
 }
 
 /*
@@ -302,78 +283,38 @@ void drop(){
 }
 
 void muda_bussola(short turn_pct){
-	Acquire(roboMutex);
+	Acquire(mutexDeslocamento);
 	/////// Ao girar para esquerda
 	if(turn_pct == 100){
-		if (orientacao[0]==true){// Se estiver para o NORTE
-			// vai pro oeste
-			orientacao[0]=false;
-			orientacao[1]=true;
-		} else if (orientacao[1]==true){// Se estiver para o OESTE
-			// vai pro sul
-			orientacao[1]=false;
-			orientacao[2]=true;
-		} else if (orientacao[2]==true){// Se estiver para o SUL
-			// vai pro leste
-			orientacao[2]=false;
-			orientacao[3]=true;
-		}
-		else if (orientacao[3]==true){// Se estiver para o LESTE
-			// vai pro norte
-			orientacao[3]=false;
-			orientacao[0]=true;
-		}
-	} 
+          orientacao = orientacao + 90;
+	}
 	/////// Ao girar para direita
 	else if (turn_pct==-100){
-		if (orientacao[0]==true){// Se estiver para o NORTE
-			// vai pro leste
-			orientacao[0]=false;
-			orientacao[3]=true;
-		} else if (orientacao[1]==true){// Se estiver para o OESTE
-			// vai pro norte
-			orientacao[1]=false;
-			orientacao[0]=true;
-		} else if (orientacao[2]==true){// Se estiver para o SUL
-			// vai pro oeste
-			orientacao[2]=false;
-			orientacao[1]=true;
-		}
-		else if (orientacao[3]==true){// Se estiver para o LESTE
-			// vai pro sul
-			orientacao[3]=false;
-			orientacao[2]=true;
-		}
+          orientacao = orientacao - 90;
 	}
-	Release(roboMutex);
+    if (orientacao == 360) orientacao = 0;
+	if (orientacao == -90) orientacao = 270;
+	Release(mutexDeslocamento);
 }
 
 void calcula_deslocamento(){
-   // Pego o grau atual
-   long RE_Atual = MotorRotationCount(MOTOR_E);
-   long RD_Atual = MotorRotationCount(MOTOR_D);
-   // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
-   Acquire(roboMutex);
-   long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;
-   long desloc_cm = 2*PI*desloc_grau; 
-   // Atualizo o grau anterior do robo
-  gr_ant_RE = RE_Atual;
-  gr_ant_RD = RD_Atual;
-   
-   // Atualizo a distancia do proprio robo
-   //bool aux = ;
-   //TextOut(5, LCD_LINE1, NumToStr(aux));
-    if (orientacao[0] == true){// Se estiver para o NORTE
-       deslocamento[1] = deslocamento[1] + desloc_cm;
-    } else if (orientacao[1]==true){// Se estiver para o OESTE
-       deslocamento[0] = deslocamento[0] - desloc_cm;
-    } else if (orientacao[2]==true){// Se estiver para o SUL
-       deslocamento[1] = deslocamento[1] - desloc_cm;
-    } else if (orientacao[3]==true){// Se estiver para o LESTE
-       deslocamento[0] = deslocamento[0] + desloc_cm;
-    }//*/
-    
-	Release(roboMutex);
+     // Pego o grau atual
+     long RE_Atual = MotorRotationCount(MOTOR_E);
+     long RD_Atual = MotorRotationCount(MOTOR_D);
+     // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
+     Acquire(mutexDeslocamento);
+     long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;
+     long desloc_cm = 2*PI*desloc_grau;
+     // Atualizo o grau anterior do robo
+     gr_ant_RE = RE_Atual;
+     gr_ant_RD = RD_Atual;
+     // Atualizo a distancia do proprio robo
+	 // em X
+     deslocamento[0] = deslocamento[0] + cos(orientacao*(PI/180.0));// seno e  cosseno recebem o valor em rads
+	 // em Y
+     deslocamento[1] = deslocamento[1] + sin(orientacao*(PI/180.0));
+     //
+	Release(mutexDeslocamento);
 }
 
 void girar_eixo(short turn_pct){
@@ -385,26 +326,37 @@ void girar_eixo(short turn_pct){
 
 
 task main (){
-   regiao = 0;
-   //
-   orientacao[0] = true;// Começa voltado pro norte do mapa
-   orientacao[0] = false;
-   orientacao[0] = false;
-   orientacao[0] = false;
-   //
-   deslocamento[0] = 0;
-   deslocamento[1] = 0;
-   //
-   gr_ant_RE = MotorRotationCount(MOTOR_E);
-   gr_ant_RD = MotorRotationCount(MOTOR_D);
-    configureSensors();
-    //RobotInOperation = true;
-    //StartTask(readFirstSupervisorMessage);
-    //StartTask(sendRobotPosition);
-    // restante do codigo do robo
-    //grab();
-    //grab();
-    sair_base();
-    //OnRevSync(OUT_BC, 50, 0);
-    //Wait(6000);
+     regiao = 0;
+     //
+     orientacao = 90; // Começa voltado pro norte do mapa
+     //
+     deslocamento[0] = 0;
+     deslocamento[1] = 0;
+     //
+     gr_ant_RE = MotorRotationCount(MOTOR_E);
+     gr_ant_RD = MotorRotationCount(MOTOR_D);
+     configureSensors();
+     //StartTask(readFirstSupervisorMessage);
+     //StartTask(sendRobotPosition);
+     // restante do codigo do robo
+     sair_base();
 }
+
+
+
+// ------- Mudar o sair da base ------- //
+// ------- Fazer a nova bussola ------- //
+
+// Fazer teste para sentido do giro
+// Fazer teste pro bluetooth acionar tudo
+// Fazer teste do deslocamento na interface
+// Mudar o teste da bussola
+
+// FAZER A TASK QUE VAI DEIXAR O ROBO ENTRANDO NA OPERAÇÃO
+
+
+
+
+
+
+// - fazer teste para chegar no estoque

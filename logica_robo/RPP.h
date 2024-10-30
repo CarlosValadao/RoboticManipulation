@@ -69,7 +69,7 @@ void formatDataMessage(float xcoord, float ycoord, string &smessage)
      string sxcoord, sycoord;
      sxcoord = NumToStr(xcoord);
      sycoord = NumToStr(ycoord);
-     smessage = StrCat("3;", sxcoord, ";", sycoord);
+     smessage = StrCat("3;", sxcoord, ";", sycoord, ";1");
 }
 
 bool sendMessage(string &message, byte msgType)

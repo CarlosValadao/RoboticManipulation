@@ -31,6 +31,7 @@ def parse_message(message: str) -> tuple[int]|int:
     #message = message.replace('\x00', '')
     message_head = message[0]
     message_tail = message[2:]
+    print(f'MENSAGEM RECEBIDA -> {message}')
     if message_head == RESPONSE:
         response_type = int(message_tail)
         return response_type

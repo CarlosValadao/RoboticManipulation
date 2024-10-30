@@ -76,7 +76,7 @@ class SupervisorClient:
     def _read_message(self, mailbox: int) -> str:
         try:
             (inbox, received_message) = self._nxt_brick.message_read(mailbox, 0, True)
-            return received_message.decode()
+            return received_message.decode().replace('\x00', '')
         except DirectProtocolError:
             return ''
     

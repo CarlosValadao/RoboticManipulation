@@ -8,37 +8,29 @@ from threading import Thread
 from constants import NXT_BLUETOOTH_MAC_ADDRESS
 from os import environ
 
-"""
-class Position(Enum):
-    BASE = "Base"
-    PATIO = "Pátio"
-    ESTOQUE = "Estoque"
-
-def checkArea(y):
-    if 1 <= y < :
-        return Position.BASE
-    elif  <= y < :
-        return Position.PATIO
-    elif <= y < :
-        return Position.ESTOQUE
-    else:
-        return "ERROR"
-"""
-
 # thread para enviar as coordenadas do robô
-
 
 class RobotPositionThread(QThread):
     position_updated = pyqtSignal(int, int, int)
 
     def run(self):
         while True:
-            # formato 'new_x;new_y'
+            # formato 'new_x;new_y;regiao'
             received_messages = supervisor_client.get_data_msgs()
             if(received_messages):
                 for data_msg in received_messages:
                     (new_x, new_y, region) = data_msg
                     self.position_updated.emit(new_x, new_y, region)
+                    
+class RobotCommThread(QThread):
+    control_signal = pyqtSignal(int)
+    def run(self):
+        while True:
+            received_comms = supervisor_client.get_response_msgs()
+            if received_comms:
+            	for comm in received_comms:
+            		self.control_signal.emit(comm)
+            	
 
 class RobotArea(QFrame):
     def __init__(self):
@@ -87,7 +79,7 @@ class RobotArea(QFrame):
         # desenhar o rastro do robô
         painter.setBrush(QColor(200, 0, 0, 150))  # cor do rastro com transparência
         for pos in self.rastro:
-            painter.drawEllipse(pos[0], pos[1], 10, 10)  # desenha cada posição do rastro
+            painter.drawEllipse(pos[0], pos[1], 5, 5)  # desenha cada posição do rastro
 
         # desenhar o robô
         painter.setBrush(QColor(255, 0, 0))
@@ -112,6 +104,12 @@ class RobotInterface(QWidget):
         self.button = QPushButton('Ativar Robô', self)
         self.button.clicked.connect(self.toggle_robot)
         self.control_layout.addWidget(self.button)
+        
+        # botao para fechar a janela
+        self.quit_button = QPushButton('Sair', self)
+        self.quit_button.clicked.connect(self.close_application)
+
+        self.control_layout.addWidget(self.quit_button)
 
         # exibe a região do robô
         self.region_label = QLabel('Região: Base', self)
@@ -137,19 +135,29 @@ class RobotInterface(QWidget):
         # cria a thread de posição
         self.position_thread = RobotPositionThread()
         self.position_thread.position_updated.connect(self.update_robot_position)
+        
+        # cria a thread de comunicação
+        self.comm_thread = RobotCommThread()
+        self.comm_thread.control_signal.connect(self.control_interface)
 
     def toggle_robot(self):
+        self.comm_thread.start()
         if not self.robot_active:
-            self.robot_active = True
-            self.button.setText('Desativar Robô')
             supervisor_client.send_message(request_code=0)
+            
+    def control_interface(self, control):
+        if control == 3:
+            self.robot_active = True
+            self.button.setText('Robô Ativado')
+            self.button.setEnabled(False)
             self.robot_area.rastro.clear()
             self.position_thread.start()
-        else:
-            self.robot_active = False
+        elif control == 2:
             self.button.setText('Ativar Robô')
-            supervisor_client.send_message(request_code=1)
+            self.button.setEnabled(True)
             self.position_thread.terminate()
+            self.robot_active = False
+            
 
     def update_robot_position(self, new_x, new_y, regiao):
         # limita a posição do robô
@@ -157,8 +165,8 @@ class RobotInterface(QWidget):
         robot_area_height = self.robot_area.height()
 
         # garante que o robô não saia dos limites da área
-        new_x = max(0, min(new_x, robot_area_width - 20))  # -20 para manter o círculo visível
-        new_y = max(0, min(new_y, robot_area_height - 20))
+        new_x = max(0, min(new_x + 150, robot_area_width - 20))  # -20 para manter o círculo visível
+        new_y = max(0, min(new_y + 150, robot_area_height - 20))
 
         # atualiza a posição do robô na área
         self.robot_area.update_robot_position([new_x, new_y])
@@ -173,8 +181,10 @@ class RobotInterface(QWidget):
             self.region_label.setText('Região: Estoque')
         else:
             self.region_label.setText('Região: Desconhecida')
-        
 
+    def close_application(self):
+        print("Aplicação fechando...")
+        self.close()  # Fecha a janela
 
 if __name__ == '__main__':
     environ['QT_QPA_PLATFORM'] = 'xcb'

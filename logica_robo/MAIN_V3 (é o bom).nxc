@@ -40,7 +40,6 @@ void configureSensors();
 void calcula_deslocamento();
 void girar_eixo(short turn_pct);
 void muda_bussola(short turn_pct);
-void playBeep(short frequency, byte ntimes);
 void grab();
 void drop();
 /*
@@ -71,6 +70,7 @@ mutex messageMutex;
 
 
 
+
 /*
         =============================================
                         MODULOS BLUETOOTH
@@ -88,22 +88,20 @@ void handleSupervisorRequest(byte requestCodeb)
           formatMessage(robotStatus, msgToSend);
           sendMessage(msgToSend, RESPONSE);
           //Release(messageMutex);
-          // byte i;
-          // for (i=0; i<2; i++)
-          // {
-          //      PlayTone(2000, 200);
-          //      Wait(1000);
-          // }
-          playBeep(2000, 2);
+          byte i;
+          for (i=0; i<2; i++)
+          {
+               PlayTone(2000, 200);
+               Wait(1000);
+          }
      }
      else if (requestCodeb != GO)
      {
-          // for (byte i=0; i < 5; i++)
-          // {
-          //     PlayTone(300, 200);
-          //     Wait(1000);
-          // }
-          playBeep(300, 5);
+          for (byte i=0; i < 5; i++)
+          {
+              PlayTone(300, 200);
+              Wait(1000);
+          }
      }
 }
 
@@ -121,9 +119,9 @@ void treatSupervisorRequest()
           //Release(messageMutex);
           TextOut(0, LCD_LINE1, "Received");
           TextOut(0, LCD_LINE2, recvdMessage);
-          //NumOut(0, LCD_LINE3, requestCode);
-          //TextOut(0, LCD_LINE4, recvdMessage[0]);
-          //TextOut(0, LCD_LINE5, recvdMessage[2]);
+          NumOut(0, LCD_LINE3, requestCode);
+          TextOut(0, LCD_LINE4, recvdMessage[0]);
+          TextOut(0, LCD_LINE5, recvdMessage[2]);
           //if (recvdMessage[0] == '1') TextOut(0, LCD_LINE8, "É IGUAL A 1");
           //if (recvdMessage[2] == '0') TextOut(0, LCD_LINE7, "É IGUAL A 0");
           //Wait(1000);
@@ -131,15 +129,6 @@ void treatSupervisorRequest()
      }
 }
 
-
-void playBeep(short frequency, byte ntimes)
-{
-     while(ntimes--)
-     {
-          PlayTone(frequency, 300);
-          Wait(500);
-     }
-}
 
 /*
         =============================================
@@ -184,6 +173,8 @@ void girar_eixo_v2(short turn_pct){
 		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
 		Off(MOTOR_E);
 	}
+	
+
 	
 	muda_bussola(turn_pct);
 }
@@ -250,7 +241,6 @@ task sendRobotPosition(){
           Wait(900);
           Acquire(RobotInOperationMutex);
           if (RobotInOperation){
-               TextOut(0, LCD_LINE3, "EXECUTANDO ENVIO");
                // Chama o mutex para não ler enquanto alguém muda
                Acquire(mutexDeslocamento);
                formatDataMessage(deslocamento[0], deslocamento[1], dataMsgToSend);
@@ -367,10 +357,10 @@ task main (){
      gr_ant_RE = MotorRotationCount(MOTOR_E);
      gr_ant_RD = MotorRotationCount(MOTOR_D);
      configureSensors();
-     StartTask(readFirstSupervisorMessage);
-     StartTask(sendRobotPosition);
+     //StartTask(readFirstSupervisorMessage);
+     //StartTask(sendRobotPosition);
      // restante do codigo do robo
-     // sair_base();
+     sair_base();
      //Wait(500);
      //OnRevSync(MOTOR_ED, POWER+20,0);
      //while((Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
@@ -392,6 +382,10 @@ task main (){
 // Mudar o teste da bussola
 
 // FAZER A TASK QUE VAI DEIXAR O ROBO ENTRANDO NA OPERAÇÃO
+
+
+
+
 
 
 // - fazer teste para chegar no estoque

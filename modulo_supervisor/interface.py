@@ -36,10 +36,9 @@ class RobotPositionThread(QThread):
             # formato 'new_x;new_y'
             received_messages = supervisor_client.get_data_msgs()
             if(received_messages):
-                for i in range(len(received_messages)):
-                    (new_x, new_y) = received_messages[i]
-                    regiao = 0
-                    self.position_updated.emit(new_x, new_y, regiao)
+                for data_msg in received_messages:
+                    (new_x, new_y, region) = data_msg
+                    self.position_updated.emit(new_x, new_y, region)
 
 class RobotArea(QFrame):
     def __init__(self):

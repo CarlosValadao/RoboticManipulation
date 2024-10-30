@@ -1,8 +1,6 @@
 # Robotics PBL Protocol
 
 from typing import Final
-from json import dumps, loads
-
 
 # Header message type
 REQUEST: Final = '1'
@@ -44,7 +42,3 @@ def parse_message(message: str) -> tuple[int]|int:
 
 def format_message(request_code: int) -> bytes:
     return f'1;{request_code}'.encode(encoding='utf-8')
-
-if __name__ == '__main__':
-    print("teste")
-    print(parse_message('3;10;12;0'))

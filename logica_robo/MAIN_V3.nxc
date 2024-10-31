@@ -1,5 +1,6 @@
 #include "RPP.h"
 
+#define MAX_BOX_MIN_DISTANCE 30
 #define DISTANCIA_ENTRE_RODAS 10 // cm
 #define RAIO_RODA 10 // cm
 #define MOTOR_E   OUT_A // Motor da esquerda
@@ -17,6 +18,10 @@
 #define COR_PRETA_LMS 40
 #define COR_PRATA_LMI 63
 #define COR_PRATA_LMS 80
+//
+#define BLACK_COLOR  0
+#define SILVER_COLOR 1
+#define RED_COLOR    2
 //
 #define LIGHT_OUT S2
 #define TOUCH_OUT S3
@@ -47,6 +52,12 @@ bool fim_de_curso();
 void sair_base();
 void grab();
 void drop();
+bool isBoxPresent();
+bool isNotTouched();
+bool isTouched();
+byte getRobotDistance();
+byte getDetectedColor();
+
 /*
 -----------------------
     Global Variables
@@ -337,12 +348,14 @@ task odometria(){
 }
 
 void grab(){
-     RotateMotor(CLAW, DEFAULT_CLAW_POWER, 110);
-     Off(CLAW);
+     //RotateMotor(CLAW, DEFAULT_CLAW_POWER, 110);
+     //Off(CLAW);
+     OnFwd(CLAW, DEFAULT_CLAW_POWER);
+     Wait(1000);
 }
 
 void drop(){
-     RotateMotor(CLAW, DEFAULT_CLAW_POWER, -90);
+     RotateMotor(CLAW, DEFAULT_CLAW_POWER, -110);
      Off(CLAW);
 }
 
@@ -389,6 +402,32 @@ void girar_eixo(short turn_pct){
 	Off(MOTOR_ED);
 }
 
+bool isBoxPresent()
+{
+     return (getRobotDistance() == MAX_BOX_MIN_DISTANCE && isNotTouched() ? true : false);
+}
+
+bool isTouched()
+{
+     return (Sensor(TOUCH_OUT) == 1 ? true : false);
+}
+
+bool isNotTouched()
+{
+     return !isTouched();
+}
+
+byte getRobotDistance()
+{
+     return SensorUS(ULTRASONIC_OUT);
+}
+
+byte getDetectedColor()
+{
+     byte reflectedLight = Sensor(LIGHT_OUT);
+     if (reflectedLight >= COR_PRETA_LMI && reflectedLight <= COR_PRETA_LMS) return BLACK_COLOR;
+     else if (reflectedLight >= COR_PRATA_LMI && reflectedLight <= COR_PRATA_LMS) return SILVER_COLOR;
+}
 
 task main (){
      regiao = 0;

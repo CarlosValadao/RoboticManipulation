@@ -147,7 +147,7 @@ class SupervisorClient:
         print(f'[SUCCESS] - {message}')
     
 if __name__ == '__main__':
-    supervisor_client = SupervisorClient('00:16:53:09:70:AA')
+    supervisor_client = SupervisorClient(NXT_BLUETOOTH_MAC_ADDRESS)
     supervisor_client.send_message(request_code=RPP.GO)
     supervisor_client.catch_all_messages()
     # supervisor_client.close_nxt_connection()

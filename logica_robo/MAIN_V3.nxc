@@ -297,11 +297,11 @@ task sendRobotPosition(){
 
 task sendUltrassonic()
 {
+     byte detectedColor;
      while (1)
      {
-          byte ultrasonic;
-          ultrasonic = SensorUS(ULTRASONIC_OUT);
-          formatMessage(ultrasonic, msgToSend);
+          detectedColor = getRobotDistance();
+          formatMessage(detectedColor, msgToSend);
           sendMessage(msgToSend, RESPONSE);
      }
 }
@@ -427,25 +427,31 @@ byte getDetectedColor()
      byte reflectedLight = Sensor(LIGHT_OUT);
      if (reflectedLight >= COR_PRETA_LMI && reflectedLight <= COR_PRETA_LMS) return BLACK_COLOR;
      else if (reflectedLight >= COR_PRATA_LMI && reflectedLight <= COR_PRATA_LMS) return SILVER_COLOR;
+     return UCHAR_MAX;
 }
 
 task main (){
+     configureSensors();
      regiao = 0;
      //
      orientacao = 90; // Começa voltado pro norte do mapa
      //
-     //deslocamento[0] = 0;
+     deslocamento[0] = 0;
      deslocamento[1] = 0;
      //
      gr_ant_RE = MotorRotationCount(MOTOR_E);
      gr_ant_RD = MotorRotationCount(MOTOR_D);
      //OnFwdSync(OUT_AC, 50, 0);
      //Wait(100);
-     StartTask(readFirstSupervisorMessage);
-     StartTask(sendRobotPosition);
-     //StartTask(sendUltrassonic);
+     // StartTask(readFirstSupervisorMessage);
+     // StartTask(sendRobotPosition);
+     StartTask(sendUltrassonic);
      // restante do codigo do robo
      //sair_base();
+     // SetVolume(4);
+     // while (isNotTouched());
+     // playBeep(300, 7);
+     // Wait(1000);
      //Wait(500);
      //OnRevSync(MOTOR_ED, POWER+20,0);
      //while((Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){

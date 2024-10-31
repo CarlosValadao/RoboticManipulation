@@ -18,12 +18,12 @@
 #define COR_PRATA_LMI 63
 #define COR_PRATA_LMS 80
 //
-#define LIGHT_OUT S4
+#define LIGHT_OUT S2
 #define TOUCH_OUT S3
-#define ULTRASONIC_OUT S2
-#define ULTRASONIC_SENSOR  IN_2
+#define ULTRASONIC_OUT S4
+#define ULTRASONIC_SENSOR  IN_4
 #define TOUCH_SENSOR       IN_3
-#define LIGHT_SENSOR       IN_4
+#define LIGHT_SENSOR       IN_2
 //
 #define PASSO_BUSCA 150 // Quantos graus ele avança antes de girar parea procurar uma saída
 //
@@ -41,6 +41,10 @@ void calcula_deslocamento();
 void girar_eixo(short turn_pct);
 void muda_bussola(short turn_pct);
 void playBeep(short frequency, byte ntimes);
+void segue_frente(bool control);
+void girar_eixo_v2(short turn_pct);
+bool fim_de_curso();
+void sair_base();
 void grab();
 void drop();
 /*
@@ -95,6 +99,24 @@ void handleSupervisorRequest(byte requestCodeb)
           //      Wait(1000);
           // }
           playBeep(2000, 2);
+          //sair_base();
+          //segue_frente(false);
+          // girar_eixo_v2(100);
+          // Off(MOTOR_ED);
+          // girar_eixo_v2(100);
+          // Off(MOTOR_ED);
+          // Wait(1000);
+          // drop();
+          // OnFwdSync(OUT_AB, 50, 0);
+          // Wait(700);
+          // Off(OUT_AB);
+          // grab();
+          //sair_base();
+          //OnRevSync(OUT_AB, 40, 0);
+          //Wait(500);
+          //segue_frente(false);
+          OnFwdSync(OUT_AC, 100, 0);
+          Wait(10000);
      }
      else if (requestCodeb != GO)
      {
@@ -262,6 +284,18 @@ task sendRobotPosition(){
 
 }
 
+task sendUltrassonic()
+{
+     while (1)
+     {
+          byte ultrasonic;
+          ultrasonic = SensorUS(ULTRASONIC_OUT);
+          formatMessage(ultrasonic, msgToSend);
+          sendMessage(msgToSend, RESPONSE);
+     }
+}
+
+
 /*
 Read Supervisor messages and
 show them on NXT display
@@ -303,12 +337,12 @@ task odometria(){
 }
 
 void grab(){
-     RotateMotor(CLAW, 25, 90);
+     RotateMotor(CLAW, DEFAULT_CLAW_POWER, 110);
      Off(CLAW);
 }
 
 void drop(){
-     RotateMotor(CLAW, 25, -90);
+     RotateMotor(CLAW, DEFAULT_CLAW_POWER, -90);
      Off(CLAW);
 }
 
@@ -361,16 +395,18 @@ task main (){
      //
      orientacao = 90; // Começa voltado pro norte do mapa
      //
-     deslocamento[0] = 0;
+     //deslocamento[0] = 0;
      deslocamento[1] = 0;
      //
      gr_ant_RE = MotorRotationCount(MOTOR_E);
      gr_ant_RD = MotorRotationCount(MOTOR_D);
-     configureSensors();
+     //OnFwdSync(OUT_AC, 50, 0);
+     //Wait(100);
      StartTask(readFirstSupervisorMessage);
      StartTask(sendRobotPosition);
+     //StartTask(sendUltrassonic);
      // restante do codigo do robo
-     // sair_base();
+     //sair_base();
      //Wait(500);
      //OnRevSync(MOTOR_ED, POWER+20,0);
      //while((Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){

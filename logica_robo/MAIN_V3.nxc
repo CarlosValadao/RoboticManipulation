@@ -13,6 +13,7 @@
 #define COUNTERCLOCKWISE    1
 #define POWER               25
 #define GRAU_PARA_GIRO_90   250
+#define GRAU_PARA_GIRO_90_2  280
 //
 #define COR_PRETA_LMI 28
 #define COR_PRETA_LMS 40
@@ -57,6 +58,11 @@ bool isNotTouched();
 bool isTouched();
 byte getRobotDistance();
 byte getDetectedColor();
+bool isBlackColorDetected();
+bool isSilverColorDetected();
+bool isRedColorDetected();
+bool isNotBoxPresent();
+unsigned int cm2deg(float cm);
 
 /*
 -----------------------
@@ -217,7 +223,6 @@ void girar_eixo_v2(short turn_pct){
 		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
 		Off(MOTOR_E);
 	}
-	
 	muda_bussola(turn_pct);
 }
 
@@ -265,6 +270,41 @@ void sair_base(){
 			segue_frente(false);
 		}
 	}
+}
+
+
+void girar_eixo_v3(short turn_pct){
+	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	//
+	long passo_esquerdo = MotorRotationCount(MOTOR_E) + (-turn_pct/100)*GRAU_PARA_GIRO_90_2;
+	long passo_direito = MotorRotationCount(MOTOR_D) + (turn_pct/100)*GRAU_PARA_GIRO_90_2;
+	// Girando ambos
+	OnFwdSync(MOTOR_ED, POWER, turn_pct);
+	while ((MotorRotationCount(MOTOR_D) != passo_direito) && (MotorRotationCount(MOTOR_E) != passo_esquerdo)){}
+	Off(MOTOR_ED);
+	// Se estiver girando para esquerda
+	if(turn_pct == -100){
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) > passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) < passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	// Se estiver girando para direita
+	else{
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) < passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	muda_bussola(turn_pct);
 }
 
 
@@ -351,11 +391,11 @@ void grab(){
      //RotateMotor(CLAW, DEFAULT_CLAW_POWER, 110);
      //Off(CLAW);
      OnFwd(CLAW, DEFAULT_CLAW_POWER);
-     Wait(1000);
+     Wait(1050);
 }
 
 void drop(){
-     RotateMotor(CLAW, DEFAULT_CLAW_POWER, -110);
+     RotateMotor(CLAW, DEFAULT_CLAW_POWER, -125);
      Off(CLAW);
 }
 
@@ -430,6 +470,31 @@ byte getDetectedColor()
      return UCHAR_MAX;
 }
 
+bool isBlackColorDetected()
+{
+     return (getDetectedColor() == BLACK_COLOR ? true : false);
+}
+
+bool isSilverColorDetected()
+{
+     return (getDetectedColor() == SILVER_COLOR ? true : false);
+}
+
+bool isRedColorDetected() { return true; }
+
+bool isNotBoxPresent()
+{
+     return !isBoxPresent();
+}
+
+
+unsigned int cm2deg(float cm)
+{
+
+     return (cm*360)/(PI*5.6);
+}
+
+
 task main (){
      configureSensors();
      regiao = 0;
@@ -445,7 +510,7 @@ task main (){
      //Wait(100);
      // StartTask(readFirstSupervisorMessage);
      // StartTask(sendRobotPosition);
-     StartTask(sendUltrassonic);
+     //StartTask(sendUltrassonic);
      // restante do codigo do robo
      //sair_base();
      // SetVolume(4);
@@ -457,7 +522,29 @@ task main (){
      //while((Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
      //}
      //Off(MOTOR_ED);
-     
+      while (isNotBoxPresent())
+      {
+            TextOut(3, LCD_LINE1, "COR DETECTADA ->");
+            if (isBlackColorDetected()) TextOut(0, LCD_LINE2, "PRETO");
+            else if (isSilverColorDetected()) TextOut(0, LCD_LINE3, "PRATA");
+            if (isBoxPresent()) TextOut(4, LCD_LINE4, "FOUND BOX");
+            Wait(1000);
+            ClearScreen();
+      }
+      girar_eixo_v2(-100);
+      Wait(1000);
+      girar_eixo_v3(-100);
+      drop();
+     //unsigned int distance = cm2deg(10);
+     long passo_g = abs(MotorRotationCount(MOTOR_D)) + 360;//passo requerido
+     playBeep(2000, 3);
+	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
+  //NumOut(0, LCD_LINE1, distance);
+  Wait(1000);
+  OnFwdSync(MOTOR_ED, POWER, 0);
+  while (abs(MotorRotationCount(MOTOR_D)) < passo_g);
+  Off(MOTOR_ED);
+     grab();
      //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, 100, true, true);//DIREITA
      //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, -100, true, true);//ESQUERDA
 }

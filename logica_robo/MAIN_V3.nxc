@@ -469,6 +469,48 @@ unsigned int cm2deg(float cm)
      return (cm*360)/(PI*5.6);
 }
 
+void achar_estoque(){
+     short subindo = 1;// para indicar que ele começa a busca pela porta subindo o mapa (indo por norte)
+	// Enquanto não tiver chegado no estoque
+	OnRevSync(MOTOR_ED, POWER+10, 0);
+	while((!isBlackColorDetected()) && (!isSilverColorDetected())){
+	}
+	Off(MOTOR_ED);
+	// Agora procuro a entrada do estoque (Aqui eu vou estar em frente ao possível preto)
+	while(1){
+		// Se estou vendo a porta, encerro a busca
+		if (isSilverColorDetected()){
+			break;
+		}
+		// Se estou vendo uma parede, giro a direita (se é a primeira vez que estou vendo a parede)
+		else if (Sensor(TOUCH_OUT)){
+               girar_eixo_v2(100*subindo);
+               Off(MOTOR_ED);
+               subindo = subindo*(-1);// para inverter os sentidos dos giros ao achar uma parede
+		}
+		// se estou vendo a linha preta
+		else if (isBlackColorDetected()){
+			// dou ré
+			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			Off(MOTOR_ED);
+			// giro esquerda
+			girar_eixo_v2(-100*subindo);
+			Off(MOTOR_ED);
+			// sigo em frente controlado pelo passo
+			segue_frente(true);
+			// Se não for o fim de curso, giro direita
+			if (!fim_de_curso()){
+				girar_eixo_v2(100*subindo);
+				Off(MOTOR_ED);
+			}
+		}
+		else{
+			// sigo em frente indefinido
+			segue_frente(false);
+		}
+	}
+}
+
 
 task main (){
      configureSensors();

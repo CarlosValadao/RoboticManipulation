@@ -226,7 +226,7 @@ void girar_eixo_v2(short turn_pct){
 	muda_bussola(turn_pct);
 }
 
-bool fim_de_curso(){
+bool fim_de_curso(){ 
 	// Se o sensor de toque foi acionado ou se estou lendo um valor que está no intervalo da cor preta
 	if ( Sensor(TOUCH_SENSOR) || (Sensor(LIGHT_OUT) > COR_PRETA_LMI && Sensor(LIGHT_OUT) < COR_PRETA_LMS)){
 		return true;
@@ -235,10 +235,10 @@ bool fim_de_curso(){
 }
 
 void segue_frente(bool control){
-	long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
+	long passo_r = MotorRotationCount(MOTOR_D) + PASSO_BUSCA;//passo requerido
 	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
 	OnRevSync(MOTOR_ED, POWER, 0);
-	while( ( (abs(MotorRotationCount(MOTOR_D)) < passo_r) || (!control))  && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
+	while( ( (MotorRotationCount(MOTOR_D) < passo_r) || (!control))  && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
 	}
 	Off(MOTOR_ED);
 }
@@ -522,28 +522,28 @@ task main (){
      //while((Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
      //}
      //Off(MOTOR_ED);
-      while (isNotBoxPresent())
-      {
-            TextOut(3, LCD_LINE1, "COR DETECTADA ->");
-            if (isBlackColorDetected()) TextOut(0, LCD_LINE2, "PRETO");
-            else if (isSilverColorDetected()) TextOut(0, LCD_LINE3, "PRATA");
-            if (isBoxPresent()) TextOut(4, LCD_LINE4, "FOUND BOX");
-            Wait(1000);
-            ClearScreen();
-      }
-      girar_eixo_v2(-100);
-      Wait(1000);
-      girar_eixo_v3(-100);
-      drop();
-     //unsigned int distance = cm2deg(10);
-     long passo_g = abs(MotorRotationCount(MOTOR_D)) + 360;//passo requerido
-     playBeep(2000, 3);
+     //  while (isNotBoxPresent())
+     //  {
+     //        TextOut(3, LCD_LINE1, "COR DETECTADA ->");
+     //        if (isBlackColorDetected()) TextOut(0, LCD_LINE2, "PRETO");
+     //        else if (isSilverColorDetected()) TextOut(0, LCD_LINE3, "PRATA");
+     //        if (isBoxPresent()) TextOut(4, LCD_LINE4, "FOUND BOX");
+     //        Wait(1000);
+     //        ClearScreen();
+     //  }
+     //  girar_eixo_v2(-100);
+     //  Wait(1000);
+     //  girar_eixo_v3(-100);
+     //  drop();
+     // //unsigned int distance = cm2deg(10);
+     // long passo_g = abs(MotorRotationCount(MOTOR_D)) + 360;//passo requerido
+     // playBeep(2000, 3);
 	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
-  //NumOut(0, LCD_LINE1, distance);
-  Wait(1000);
-  OnFwdSync(MOTOR_ED, POWER, 0);
-  while (abs(MotorRotationCount(MOTOR_D)) < passo_g);
-  Off(MOTOR_ED);
+  //NumOut(0, LCD_LINE1, distance); abs
+     Wait(1000);
+     OnFwdSync(MOTOR_ED, POWER, 0);
+     while (MotorRotationCount(MOTOR_D) < passo_g);
+     Off(MOTOR_ED);
      grab();
      //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, 100, true, true);//DIREITA
      //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, -100, true, true);//ESQUERDA

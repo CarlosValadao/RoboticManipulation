@@ -1,0 +1,444 @@
+#include "RPP.h"
+
+#define DISTANCIA_ENTRE_RODAS 10 // cm
+#define RAIO_RODA 10 // cm
+#define MOTOR_E   OUT_A // Motor da esquerda
+#define MOTOR_D   OUT_B // Mootor da direita
+#define MOTOR_ED  OUT_AB
+#define CLAW      OUT_C
+//
+#define DEFAULT_CLAW_POWER  15
+#define CLOCKWISE           0
+#define COUNTERCLOCKWISE    1
+#define POWER               25
+#define GRAU_PARA_GIRO_90   260
+//
+#define COR_PRETA_LMI 28
+#define COR_PRETA_LMS 40
+#define COR_PRATA_LMI 63
+#define COR_PRATA_LMS 80
+//
+#define LIGHT_OUT S2
+#define TOUCH_OUT S3
+#define ULTRASONIC_OUT S4
+#define ULTRASONIC_SENSOR  IN_4
+#define TOUCH_SENSOR       IN_3
+#define LIGHT_SENSOR       IN_2
+//
+#define PASSO_BUSCA 150 // Quantos graus ele avança antes de girar parea procurar uma saída
+//
+#define TOUCH_SENSOR_STATE SENSOR_3
+#define LIGHT_SENSOR_STATE SENSOR_2
+/*
+-----------------------
+      Prototypes
+-----------------------
+*/
+void handleSupervisorRequest(byte requestCodeb);
+void treatSupervisorRequest();
+void configureSensors();
+void calcula_deslocamento();
+void girar_eixo(short turn_pct);
+void muda_bussola(short turn_pct);
+void grab();
+void drop();
+void achar_estoque();
+/*
+-----------------------
+    Global Variables
+-----------------------
+*/
+//enum REGIAO { BASE, BANCADA, PATIO, ESTOQUE };// PATIO é a região onde tem várias bancadas
+long gr_ant_RE;// = MotorRotationCount(MOTOR_A);// Roda esquerda
+long gr_ant_RD;// Roda direita -> grau da roda direita
+mutex mutexRoda;// mutex para alterar os estados do robô
+
+int orientacao;// Indica a orientação do robo -> (90)NORTE - (180)OESTE - (270)SUL - (0)LESTE
+long deslocamento[2];//Indica o deslocamento em torno de X e Y respectivamente
+mutex mutexDeslocamento;// mutex para alterar os estados do robô
+
+short regiao; // 0-> BASE, 1->BANCADA, 2->MEIO, 3->ESTOQUE
+byte status;
+bool RobotInOperation = false;// Indica se o robô está disponivel na base
+mutex RobotInOperationMutex;
+
+byte robotStatus = AWAITING;
+byte requestCode = UCHAR_MAX;
+
+string requestMsg, msgToSend = "";
+string dataMsgToSend, responseToRequest = "";
+mutex messageMutex;
+
+
+
+
+/*
+        =============================================
+                        MODULOS BLUETOOTH
+        =============================================
+*/
+/// @brief
+/// @param requestCodeb
+void handleSupervisorRequest(byte requestCodeb)
+{
+     if (!RobotInOperation && requestCodeb == GO)
+     {
+          robotStatus = ONGOING;
+          RobotInOperation = true;
+          //Acquire(messageMutex);
+          formatMessage(robotStatus, msgToSend);
+          sendMessage(msgToSend, RESPONSE);
+          //Release(messageMutex);
+          byte i;
+          for (i=0; i<2; i++)
+          {
+               PlayTone(2000, 200);
+               Wait(1000);
+          }
+     }
+     else if (requestCodeb != GO)
+     {
+          for (byte i=0; i < 5; i++)
+          {
+              PlayTone(300, 200);
+              Wait(1000);
+          }
+     }
+}
+
+
+void treatSupervisorRequest()
+{
+     byte requestCode;
+     string recvdMessage;
+     if (readMessage(recvdMessage))
+     {
+          //ClearScreen();
+          //Acquire(messageMutex);
+          requestCode = parseMessage(recvdMessage);
+          requestMsg = recvdMessage;
+          //Release(messageMutex);
+          TextOut(0, LCD_LINE1, "Received");
+          TextOut(0, LCD_LINE2, recvdMessage);
+          NumOut(0, LCD_LINE3, requestCode);
+          TextOut(0, LCD_LINE4, recvdMessage[0]);
+          TextOut(0, LCD_LINE5, recvdMessage[2]);
+          //if (recvdMessage[0] == '1') TextOut(0, LCD_LINE8, "É IGUAL A 1");
+          //if (recvdMessage[2] == '0') TextOut(0, LCD_LINE7, "É IGUAL A 0");
+          //Wait(1000);
+          handleSupervisorRequest(requestCode);
+     }
+}
+
+
+/*
+        =============================================
+                MODULOS LÓGICA DO PROBLEMA
+        =============================================
+*/
+void configureSensors() {
+    SetSensorTouch(TOUCH_SENSOR);
+    SetSensorUltrasonic(ULTRASONIC_SENSOR);
+    SetSensorLight(LIGHT_SENSOR);
+}
+
+
+void girar_eixo_v2(short turn_pct){
+	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	//
+	long passo_esquerdo = MotorRotationCount(MOTOR_E) + (-turn_pct/100)*GRAU_PARA_GIRO_90;
+	long passo_direito = MotorRotationCount(MOTOR_D) + (turn_pct/100)*GRAU_PARA_GIRO_90;
+	// Girando ambos
+	OnFwdSync(MOTOR_ED, POWER, turn_pct);
+	while ((MotorRotationCount(MOTOR_D) != passo_direito) && (MotorRotationCount(MOTOR_E) != passo_esquerdo)){}
+	Off(MOTOR_ED);
+	// Se estiver girando para esquerda
+	if(turn_pct == -100){
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) > passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) < passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	// Se estiver girando para direita
+	else{
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) < passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	
+
+	
+	muda_bussola(turn_pct);
+}
+
+bool fim_de_curso(){
+	// Se o sensor de toque foi acionado ou se estou lendo um valor que está no intervalo da cor preta
+	if ( Sensor(TOUCH_SENSOR) || (Sensor(LIGHT_OUT) > COR_PRETA_LMI && Sensor(LIGHT_OUT) < COR_PRETA_LMS)){
+		return true;
+	}
+	return false;
+}
+
+void segue_frente(bool control){
+	long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
+	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
+	OnRevSync(MOTOR_ED, POWER, 0);
+	while( ( (abs(MotorRotationCount(MOTOR_D)) < passo_r) || (!control))  && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
+	}
+	Off(MOTOR_ED);
+}
+
+void sair_base(){
+	girar_eixo_v2(100);// Giro para direita
+	Off(MOTOR_ED);
+	while (true){
+		// Se estou vendo a porta, encerro a busca
+		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
+			break;
+		}
+		// Se estou no fim de curso
+		if (fim_de_curso()){
+			//--- dou ré e giro esquerda
+			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			Off(MOTOR_ED);
+			girar_eixo_v2(-100);
+			Off(MOTOR_ED);
+			// ando frente e giro direita
+			segue_frente(true);// sigo em frente controlado pelo passo
+			if (!fim_de_curso()){
+				girar_eixo_v2(100);
+				Off(MOTOR_ED);
+			}
+		}
+		else{
+			// sigo em frente indefinido
+			segue_frente(false);
+		}
+	}
+}
+
+
+
+/*
+Send robot position X and Y coordinates
+every one sec
+*/
+// falta adicionar uma variavel de controle
+// para quebrar o laco (com break)
+task sendRobotPosition(){
+	while (1)
+     {    ClearScreen();
+          NumOut(0, LCD_LINE1, deslocamento[0]);
+          NumOut(0, LCD_LINE2, deslocamento[1]);
+          Wait(900);
+          Acquire(RobotInOperationMutex);
+          if (RobotInOperation){
+               // Chama o mutex para não ler enquanto alguém muda
+               Acquire(mutexDeslocamento);
+               formatDataMessage(deslocamento[0], deslocamento[1], dataMsgToSend);
+               Release(mutexDeslocamento);
+               sendMessage(dataMsgToSend, POSITION);
+          }
+          Release(RobotInOperationMutex);
+     }
+
+}
+
+/*
+Read Supervisor messages and
+show them on NXT display
+*/
+task readFirstSupervisorMessage()
+{
+     while (1)
+     {
+          ClearScreen();
+          TextOut(5, LCD_LINE1, "Wait for the");
+          TextOut(5, LCD_LINE2, "first msg");
+          Acquire(RobotInOperationMutex);
+          treatSupervisorRequest();
+          if (RobotInOperation)
+          {
+               Release(RobotInOperationMutex);
+               break;
+          }
+          Release(RobotInOperationMutex);
+     }
+}
+/*
+Calcula a distância Percorrida a cada X tempos
+*/
+task odometria(){
+	short i;
+	for (i = 392; i < 1319; i=i+102){
+		PlayTone(i, 700);
+		Wait(500);
+	}
+
+	startOdometerCalc:
+	while (RobotInOperation){
+		//calcula_deslocamento();
+		Wait(100);
+	}
+	while (!RobotInOperation);
+	goto startOdometerCalc;
+}
+
+void grab(){
+     RotateMotor(CLAW, 25, 90);
+     Off(CLAW);
+}
+
+void drop(){
+     RotateMotor(CLAW, 25, -90);
+     Off(CLAW);
+}
+
+void muda_bussola(short turn_pct){
+	Acquire(mutexDeslocamento);
+	/////// Ao girar para esquerda
+	if(turn_pct == 100){
+          orientacao = orientacao + 90;
+	}
+	/////// Ao girar para direita
+	else if (turn_pct==-100){
+          orientacao = orientacao - 90;
+	}
+    if (orientacao == 360) orientacao = 0;
+	if (orientacao == -90) orientacao = 270;
+	Release(mutexDeslocamento);
+}
+
+void calcula_deslocamento(){
+     // Pego o grau atual
+     long RE_Atual = MotorRotationCount(MOTOR_E);
+     long RD_Atual = MotorRotationCount(MOTOR_D);
+     // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
+     Acquire(mutexDeslocamento);
+     long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;
+     long desloc_cm = 2*PI*desloc_grau;
+     // Atualizo o grau anterior do robo
+     gr_ant_RE = RE_Atual;
+     gr_ant_RD = RD_Atual;
+     // Atualizo a distancia do proprio robo
+	 // em X
+	 long valor = orientacao*(PI/180.0);
+     deslocamento[0] = deslocamento[0] + Cos(valor)*desloc_cm;// seno e  cosseno recebem o valor em rads
+	 // em Y
+     deslocamento[1] = deslocamento[1] + Sin(valor)*desloc_cm;
+     //
+	Release(mutexDeslocamento);
+}
+
+void girar_eixo(short turn_pct){
+	calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, turn_pct, true, true);
+	muda_bussola(turn_pct);
+	Off(MOTOR_ED);
+}
+
+
+void achar_estoque(){
+	short subindo = 1;// para indicar que ele começa a busca pela porta subindo o mapa (indo por norte)
+	// Enquanto não tiver chegado no estoque
+	OnRevSync(MOTOR_ED, POWER+10, 0);
+	while((Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
+	}
+	Off(MOTOR_ED);
+	// Agora procuro a entrada do estoque (Aqui eu vou estar em frente ao possível preto)
+	// Giro esquerda
+	while(Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS){
+		// Se estou vendo a porta, encerro a busca
+		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
+			break;
+		}
+		// Se estou vendo uma parede, dou um 180
+		else if (Sensor(TOUCH_OUT)){
+		       girar_eixo_v2(100*subindo);
+		       Off(MOTOR_ED);
+		       subindo = subindo*(-1);// para inverter os sentidos dos giros ao achar uma parede
+		}
+		// se estou vendo a linha preta
+		else if (Sensor(LIGHT_OUT) > COR_PRETA_LMI && Sensor(LIGHT_OUT) < COR_PRETA_LMS){
+			// dou ré
+			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			Off(MOTOR_ED);
+			// giro esquerda
+			girar_eixo_v2(-100*subindo);
+			Off(MOTOR_ED);
+			// sigo em frente controlado pelo passo
+			segue_frente(true);
+			// Se não for o fim de curso, giro direita
+			if (!fim_de_curso()){
+				girar_eixo_v2(100*subindo);
+				Off(MOTOR_ED);
+			}
+		}
+		else{
+			PlayTone(2000, 500);
+			// sigo em frente indefinido
+			segue_frente(false);
+		}
+	}
+}
+
+
+
+
+
+			
+
+task main (){
+     regiao = 0;
+     //
+     orientacao = 90; // Começa voltado pro norte do mapa
+     //
+     deslocamento[0] = 0;
+     deslocamento[1] = 0;
+     //
+     gr_ant_RE = MotorRotationCount(MOTOR_E);
+     gr_ant_RD = MotorRotationCount(MOTOR_D);
+     configureSensors();
+     //StartTask(readFirstSupervisorMessage);
+     //StartTask(sendRobotPosition);
+     // restante do codigo do robo
+     sair_base();
+     RotateMotorEx(MOTOR_ED, POWER, -100, 0, true, true);
+     achar_estoque();
+     //Wait(500);
+     //OnRevSync(MOTOR_ED, POWER+20,0);
+     //while((Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
+     //}
+     //Off(MOTOR_ED);
+     
+     //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, 100, true, true);//DIREITA
+     //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, -100, true, true);//ESQUERDA
+}
+
+
+
+// ------- Mudar o sair da base ------- //
+// ------- Fazer a nova bussola ------- //
+
+// Fazer teste para sentido do giro
+// Fazer teste pro bluetooth acionar tudo
+// Fazer teste do deslocamento na interface
+// Mudar o teste da bussola
+
+// FAZER A TASK QUE VAI DEIXAR O ROBO ENTRANDO NA OPERAÇÃO
+
+
+
+
+
+
+// - fazer teste para chegar no estoque

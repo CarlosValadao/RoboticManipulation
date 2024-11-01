@@ -516,8 +516,9 @@ task main (){
      // NumOut(0, LCD_LINE1, distance);
      long passo_g = MotorRotationCount(MOTOR_D) + 360;//passo requerido
      Wait(1000);
-     OnRevSync(MOTOR_ED, POWER, 0);
-     while (MotorRotationCount(MOTOR_D) < passo_g);
+     //OnRevSync(MOTOR_ED, POWER, 0);
+     //while (MotorRotationCount(MOTOR_D) < passo_g);
+     RotateMotorEx(MOTOR_ED, POWER, passo_g, 0, true, true);
      Off(MOTOR_ED);
      grab();
      //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, 100, true, true);//DIREITA

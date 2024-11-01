@@ -1,5 +1,6 @@
 #include "RPP.h"
 
+#define MAX_BOX_MIN_DISTANCE 30
 #define DISTANCIA_ENTRE_RODAS 10 // cm
 #define RAIO_RODA 10 // cm
 #define MOTOR_E   OUT_A // Motor da esquerda
@@ -12,11 +13,16 @@
 #define COUNTERCLOCKWISE    1
 #define POWER               25
 #define GRAU_PARA_GIRO_90   260
+#define GRAU_PARA_GIRO_90_2  295
 //
 #define COR_PRETA_LMI 28
 #define COR_PRETA_LMS 40
 #define COR_PRATA_LMI 63
 #define COR_PRATA_LMS 80
+//
+#define BLACK_COLOR  0
+#define SILVER_COLOR 1
+#define RED_COLOR    2
 //
 #define LIGHT_OUT S2
 #define TOUCH_OUT S3
@@ -40,9 +46,27 @@ void configureSensors();
 void calcula_deslocamento();
 void girar_eixo(short turn_pct);
 void muda_bussola(short turn_pct);
+void playBeep(short frequency, byte ntimes);
+void segue_frente(bool control);
+void girar_eixo_v2(short turn_pct);
+bool fim_de_curso();
+void sair_base();
+void achar_bancada();
 void grab();
 void drop();
-void achar_estoque();
+bool isBoxPresent();
+bool isNotTouched();
+bool isTouched();
+byte getRobotDistance();
+byte getDetectedColor();
+bool isBlackColorDetected();
+bool isSilverColorDetected();
+bool isRedColorDetected();
+bool isNotBoxPresent();
+unsigned int cm2deg(float cm);
+void goBackward30cm();
+void segue_frente_v2(bool control);
+void turn180d();
 /*
 -----------------------
     Global Variables
@@ -174,8 +198,6 @@ void girar_eixo_v2(short turn_pct){
 		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
 		Off(MOTOR_E);
 	}
-	
-
 	
 	muda_bussola(turn_pct);
 }
@@ -339,14 +361,6 @@ void calcula_deslocamento(){
 	Release(mutexDeslocamento);
 }
 
-void girar_eixo(short turn_pct){
-	calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
-	RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, turn_pct, true, true);
-	muda_bussola(turn_pct);
-	Off(MOTOR_ED);
-}
-
-
 void achar_estoque(){
 	short subindo = 1;// para indicar que ele começa a busca pela porta subindo o mapa (indo por norte)
 	// Enquanto não tiver chegado no estoque
@@ -393,8 +407,137 @@ void achar_estoque(){
 
 
 
+/////////////////////////////////////////////////////////////////
+void girar_eixo_v3(short turn_pct){
+	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÃ‡ÃƒO ERRADO
+	//
+	long passo_esquerdo = MotorRotationCount(MOTOR_E) + (-turn_pct/100)*GRAU_PARA_GIRO_90_2;
+	long passo_direito = MotorRotationCount(MOTOR_D) + (turn_pct/100)*GRAU_PARA_GIRO_90_2;
+	// Girando ambos
+	OnFwdSync(MOTOR_ED, POWER, turn_pct);
+	while ((MotorRotationCount(MOTOR_D) != passo_direito) && (MotorRotationCount(MOTOR_E) != passo_esquerdo)){}
+	Off(MOTOR_ED);
+	// Se estiver girando para esquerda
+	if(turn_pct == -100){
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) > passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) < passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	// Se estiver girando para direita
+	else{
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) < passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	muda_bussola(turn_pct);
+}
 
+void achar_bancada(){
+	segue_frente(true);
+	girar_eixo_v2(-100);
+	Off(MOTOR_ED);
+	while (true){
+		if ((Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT)) && (orientacao == 90 || orientacao == 270)){
+			segue_frente(true);
+			Off(MOTOR_ED);
+			turn180d();
+			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			drop();
+			segue_frente(true);
+			grab();
+			segue_frente(true);
+			girar_eixo_v2(-100);
+			break;
+		}
+		if (fim_de_curso()){
+			//--- dou ré e giro esquerda
+			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			Off(MOTOR_ED);
+			girar_eixo_v2(100);
+			Off(MOTOR_ED);
+			// ando frente e giro direita
+			segue_frente(true);// sigo em frente controlado pelo passo
+			if (!fim_de_curso()){
+				girar_eixo_v2(-100);
+				Off(MOTOR_ED);
+			}
+		}
+		else{
+			// sigo em frente indefinido
+			segue_frente(false);
+		}
+	}
 
+}
+
+void goBackward30cm()
+{
+     long passo_g = MotorRotationCount(MOTOR_D) + 613;
+     RotateMotorEx(MOTOR_ED, POWER, passo_g, 0, true, true);
+     Off(MOTOR_ED);
+}
+
+void turn180d()
+{
+     girar_eixo_v2(-100);
+     Wait(1000);
+     girar_eixo_v3(-100);// era v3
+}
+
+bool isBoxPresent()
+{
+     return (getRobotDistance() == MAX_BOX_MIN_DISTANCE && isNotTouched() ? true : false);
+}
+
+bool isTouched()
+{
+     return (Sensor(TOUCH_OUT) == 1 ? true : false);
+}
+
+bool isNotTouched()
+{
+     return !isTouched();
+}
+
+byte getRobotDistance()
+{
+     return SensorUS(ULTRASONIC_OUT);
+}
+
+byte getDetectedColor()
+{
+     byte reflectedLight = Sensor(LIGHT_OUT);
+     if (reflectedLight >= COR_PRETA_LMI && reflectedLight <= COR_PRETA_LMS) return BLACK_COLOR;
+     else if (reflectedLight >= COR_PRATA_LMI && reflectedLight <= COR_PRATA_LMS) return SILVER_COLOR;
+     return UCHAR_MAX;
+}
+
+bool isBlackColorDetected()
+{
+     return (getDetectedColor() == BLACK_COLOR ? true : false);
+}
+
+bool isSilverColorDetected()
+{
+     return (getDetectedColor() == SILVER_COLOR ? true : false);
+}
+
+bool isRedColorDetected() { return true; }
+
+bool isNotBoxPresent()
+{
+     return !isBoxPresent();
+}		
 			
 
 task main (){

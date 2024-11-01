@@ -8,12 +8,12 @@
 #define MOTOR_ED  OUT_AB
 #define CLAW      OUT_C
 //
-#define DEFAULT_CLAW_POWER  15
-#define CLOCKWISE           0
-#define COUNTERCLOCKWISE    1
-#define POWER               25
-#define GRAU_PARA_GIRO_90   250
-#define GRAU_PARA_GIRO_90_2  280
+#define DEFAULT_CLAW_POWER   15
+#define CLOCKWISE            0
+#define COUNTERCLOCKWISE     1
+#define POWER                25
+#define GRAU_PARA_GIRO_90    250
+#define GRAU_PARA_GIRO_90_2  295
 //
 #define COR_PRETA_LMI 28
 #define COR_PRETA_LMS 40
@@ -63,6 +63,9 @@ bool isSilverColorDetected();
 bool isRedColorDetected();
 bool isNotBoxPresent();
 unsigned int cm2deg(float cm);
+void goBackward30cm();
+void segue_frente_v2(bool control);
+void turn180d();
 
 /*
 -----------------------
@@ -218,7 +221,8 @@ void segue_frente(bool control){
 	Off(MOTOR_ED);
 }
 
-void sair_base(){
+
+/*void sair_base(){
 	girar_eixo_v2(100);// Giro para direita
 	Off(MOTOR_ED);
 	while (true){
@@ -229,7 +233,7 @@ void sair_base(){
 		// Se estou no fim de curso
 		if (fim_de_curso()){
 			//--- dou ré e giro esquerda
-			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			RotateMotorEx(MOTOR_ED, POWER, -200, 0, true, true);
 			Off(MOTOR_ED);
 			girar_eixo_v2(-100);
 			Off(MOTOR_ED);
@@ -246,6 +250,40 @@ void sair_base(){
 		}
 	}
 }
+*/
+
+
+void sair_base(){
+	girar_eixo_v2(100);// Giro para direita
+	Off(MOTOR_ED);
+	while (true){
+		// Se estou vendo a porta, encerro a busca
+		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
+			break;
+		}
+		// Se estou no fim de curso
+		if (fim_de_curso()){
+			//--- dou r� e giro esquerda
+			RotateMotorEx(MOTOR_ED, POWER, -200, 0, true, true);
+			Off(MOTOR_ED);
+			girar_eixo_v2(-100);
+			Off(MOTOR_ED);
+			// ando frente e giro direita
+			segue_frente(true);// sigo em frente controlado pelo passo
+			if (!fim_de_curso()){
+				girar_eixo_v2(100);
+				Off(MOTOR_ED);
+			}
+		}
+		else{
+			// sigo em frente indefinido
+			segue_frente(false);
+		}
+	}
+}
+
+
+
 
 
 void girar_eixo_v3(short turn_pct){
@@ -370,7 +408,7 @@ void grab(){
 }
 
 void drop(){
-     RotateMotor(CLAW, DEFAULT_CLAW_POWER, -125);
+     RotateMotor(CLAW, DEFAULT_CLAW_POWER, -115);
      Off(CLAW);
 }
 
@@ -419,7 +457,7 @@ void girar_eixo(short turn_pct){
 
 bool isBoxPresent()
 {
-     return (getRobotDistance() <= MAX_BOX_MIN_DISTANCE && isNotTouched() ? true : false);
+     return (getRobotDistance() == MAX_BOX_MIN_DISTANCE && isNotTouched() ? true : false);
 }
 
 bool isTouched()
@@ -511,6 +549,31 @@ void achar_estoque(){
 	}
 }
 
+void goBackward30cm()
+{
+     long passo_g = MotorRotationCount(MOTOR_D) + 613;
+     RotateMotorEx(MOTOR_ED, POWER, passo_g, 0, true, true);
+     Off(MOTOR_ED);
+}
+
+void segue_frente_v2(bool control){
+	long passo_r = MotorRotationCount(MOTOR_D) + PASSO_BUSCA;//passo requerido
+	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
+	OnRevSync(MOTOR_ED, POWER, 0);
+	while( ( (MotorRotationCount(MOTOR_D) < passo_r) || (!control))  && (!Sensor(TOUCH_OUT)) && (!isBlackColorDetected()) && (!isSilverColorDetected())){
+        if (isBoxPresent()) break;
+	}
+	Off(MOTOR_ED);
+}
+
+// turn the robot 180 degrees
+void turn180d()
+{
+     girar_eixo_v2(-100);
+     Wait(1000);
+     girar_eixo_v3(-100);
+}
+
 
 task main (){
      configureSensors();
@@ -539,32 +602,37 @@ task main (){
      //while((Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
      //}
      //Off(MOTOR_ED);
-     //  while (isNotBoxPresent())
-     //  {
-     //        TextOut(3, LCD_LINE1, "COR DETECTADA ->");
-     //        if (isBlackColorDetected()) TextOut(0, LCD_LINE2, "PRETO");
-     //        else if (isSilverColorDetected()) TextOut(0, LCD_LINE3, "PRATA");
-     //        if (isBoxPresent()) TextOut(4, LCD_LINE4, "FOUND BOX");
-     //        Wait(1000);
-     //        ClearScreen();
-     //  }
-     //  girar_eixo_v2(-100);
-     //  Wait(1000);
-     //  girar_eixo_v3(-100);
-     //  drop();
-     // //unsigned int distance = cm2deg(10);
+     //while (isNotBoxPresent())
+     //{
+            //TextOut(3, LCD_LINE1, "COR DETECTADA ->");
+            // if (isBlackColorDetected()) TextOut(0, LCD_LINE2, "PRETO");
+            // else if (isSilverColorDetected()) TextOut(0, LCD_LINE3, "PRATA");
+            // if (isBoxPresent()) TextOut(4, LCD_LINE4, "FOUND BOX");
+            // Wait(1000);
+            // ClearScreen();
+            //segue_frente
+     //}
+     //until(SENSOR_3 == 1);
+     segue_frente_v2(false);
+     //OnRevSync(MOTOR_ED, 25, 0);
+     //while (isNotBoxPresent());
+     turn180d();
+    // drop();
+     //unsigned int distance = cm2deg(10);
      // playBeep(2000, 3);
 	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
      // NumOut(0, LCD_LINE1, distance);
-     long passo_g = MotorRotationCount(MOTOR_D) + 360;//passo requerido
-     Wait(1000);
-     //OnRevSync(MOTOR_ED, POWER, 0);
-     //while (MotorRotationCount(MOTOR_D) < passo_g);
-     RotateMotorEx(MOTOR_ED, POWER, passo_g, 0, true, true);
-     Off(MOTOR_ED);
-     grab();
+     drop();
      //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, 100, true, true);//DIREITA
      //RotateMotorEx(MOTOR_ED, POWER, GRAU_PARA_GIRO_90, -100, true, true);//ESQUERDA
+     //long passo_g = abs(MotorRotationCount(MOTOR_D)) + 400;
+     //NumOut(0, LCD_LINE4, passo_g);
+     //NumOut(0, LCD_LINE5, MotorRotationCount(MOTOR_D));
+     Wait(1000);
+     RotateMotorEx(MOTOR_ED, POWER, 613, 0, true, true);
+     Off(MOTOR_ED);
+     grab();
+     segue_frente(false);
 }
 
 

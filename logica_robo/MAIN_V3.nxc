@@ -69,7 +69,6 @@ unsigned int cm2deg(float cm);
     Global Variables
 -----------------------
 */
-//enum REGIAO { BASE, BANCADA, PATIO, ESTOQUE };// PATIO é a região onde tem várias bancadas
 long gr_ant_RE;// = MotorRotationCount(MOTOR_A);// Roda esquerda
 long gr_ant_RD;// Roda direita -> grau da roda direita
 mutex mutexRoda;// mutex para alterar os estados do robô
@@ -105,33 +104,9 @@ void handleSupervisorRequest(byte requestCodeb)
      {
           robotStatus = ONGOING;
           RobotInOperation = true;
-          //Acquire(messageMutex);
           formatMessage(robotStatus, msgToSend);
           sendMessage(msgToSend, RESPONSE);
-          //Release(messageMutex);
-          // byte i;
-          // for (i=0; i<2; i++)
-          // {
-          //      PlayTone(2000, 200);
-          //      Wait(1000);
-          // }
           playBeep(2000, 2);
-          //sair_base();
-          //segue_frente(false);
-          // girar_eixo_v2(100);
-          // Off(MOTOR_ED);
-          // girar_eixo_v2(100);
-          // Off(MOTOR_ED);
-          // Wait(1000);
-          // drop();
-          // OnFwdSync(OUT_AB, 50, 0);
-          // Wait(700);
-          // Off(OUT_AB);
-          // grab();
-          //sair_base();
-          //OnRevSync(OUT_AB, 40, 0);
-          //Wait(500);
-          //segue_frente(false);
           OnFwdSync(OUT_AC, 100, 0);
           Wait(10000);
      }
@@ -228,7 +203,7 @@ void girar_eixo_v2(short turn_pct){
 
 bool fim_de_curso(){ 
 	// Se o sensor de toque foi acionado ou se estou lendo um valor que está no intervalo da cor preta
-	if ( Sensor(TOUCH_SENSOR) || (Sensor(LIGHT_OUT) > COR_PRETA_LMI && Sensor(LIGHT_OUT) < COR_PRETA_LMS)){
+	if ( Sensor(TOUCH_SENSOR) || (!isBlackColorDetected())){
 		return true;
 	}
 	return false;
@@ -238,7 +213,7 @@ void segue_frente(bool control){
 	long passo_r = MotorRotationCount(MOTOR_D) + PASSO_BUSCA;//passo requerido
 	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
 	OnRevSync(MOTOR_ED, POWER, 0);
-	while( ( (MotorRotationCount(MOTOR_D) < passo_r) || (!control))  && (!Sensor(TOUCH_OUT)) && (Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
+	while( ( (MotorRotationCount(MOTOR_D) < passo_r) || (!control))  && (!Sensor(TOUCH_OUT)) && (!isBlackColorDetected()) && (!isSilverColorDetected())){
 	}
 	Off(MOTOR_ED);
 }
@@ -248,7 +223,7 @@ void sair_base(){
 	Off(MOTOR_ED);
 	while (true){
 		// Se estou vendo a porta, encerro a busca
-		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
+		if (isSilverColorDetected()){
 			break;
 		}
 		// Se estou no fim de curso
@@ -426,8 +401,8 @@ void calcula_deslocamento(){
      gr_ant_RE = RE_Atual;
      gr_ant_RD = RD_Atual;
      // Atualizo a distancia do proprio robo
-	 // em X
-	 long valor = orientacao*(PI/180.0);
+	// em X
+	long valor = orientacao*(PI/180.0);
      deslocamento[0] = deslocamento[0] + Cos(valor)*desloc_cm;// seno e  cosseno recebem o valor em rads
 	 // em Y
      deslocamento[1] = deslocamento[1] + Sin(valor)*desloc_cm;
@@ -536,12 +511,12 @@ task main (){
      //  girar_eixo_v3(-100);
      //  drop();
      // //unsigned int distance = cm2deg(10);
-     // long passo_g = abs(MotorRotationCount(MOTOR_D)) + 360;//passo requerido
      // playBeep(2000, 3);
 	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
-  //NumOut(0, LCD_LINE1, distance); abs
+     // NumOut(0, LCD_LINE1, distance);
+     long passo_g = MotorRotationCount(MOTOR_D) + 360;//passo requerido
      Wait(1000);
-     OnFwdSync(MOTOR_ED, POWER, 0);
+     OnRevSync(MOTOR_ED, POWER, 0);
      while (MotorRotationCount(MOTOR_D) < passo_g);
      Off(MOTOR_ED);
      grab();
@@ -550,16 +525,26 @@ task main (){
 }
 
 
+// recebi do bluetooth
+// começo
 
-// ------- Mudar o sair da base ------- //
-// ------- Fazer a nova bussola ------- //
+    // regiao = base
+    // sair da base
+    // regiao = meio
 
-// Fazer teste para sentido do giro
+
+// achar o estoque
 // Fazer teste pro bluetooth acionar tudo
 // Fazer teste do deslocamento na interface
-// Mudar o teste da bussola
-
 // FAZER A TASK QUE VAI DEIXAR O ROBO ENTRANDO NA OPERAÇÃO
-
-
+// - testar bussola e odometria
 // - fazer teste para chegar no estoque
+
+
+// achar a caixa - carlos
+// achar a bancada e deixar a caixa na bancada - nirvan
+// sair do estoque - washington
+// encontrar o estoque - washington
+// sair da base - washington 
+// volta para a base - nirvan
+// integrar tudo - carlos

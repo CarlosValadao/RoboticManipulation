@@ -2,7 +2,7 @@
 
 #define MAX_BOX_MIN_DISTANCE 30
 #define DISTANCIA_ENTRE_RODAS 10 // cm
-#define RAIO_RODA 10 // cm
+#define DIAMETRO_RODA 5.6 // cm
 #define MOTOR_E   OUT_A // Motor da esquerda
 #define MOTOR_D   OUT_B // Mootor da direita
 #define MOTOR_ED  OUT_AB
@@ -347,7 +347,7 @@ void calcula_deslocamento(){
      // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
      Acquire(mutexDeslocamento);
      long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;
-     long desloc_cm = 2*PI*abs(desloc_grau)/360;
+     long desloc_cm = 2*PI*(DIAMETRO_RODA/2)*abs(desloc_grau)/360;
      // Atualizo o grau anterior do robo
      gr_ant_RE = RE_Atual;
      gr_ant_RD = RD_Atual;

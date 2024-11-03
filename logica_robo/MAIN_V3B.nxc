@@ -327,13 +327,13 @@ void drop(){
 
 void muda_bussola(short turn_pct){
 	Acquire(mutexDeslocamento);
-	/////// Ao girar para esquerda
-	if(turn_pct == 100){
-          orientacao = orientacao + 90;
-	}
 	/////// Ao girar para direita
-	else if (turn_pct==-100){
+	if(turn_pct == 100){
           orientacao = orientacao - 90;
+	}
+	/////// Ao girar para esquerda
+	else if (turn_pct==-100){
+          orientacao = orientacao + 90;
 	}
     if (orientacao == 360) orientacao = 0;
 	if (orientacao == -90) orientacao = 270;
@@ -347,16 +347,16 @@ void calcula_deslocamento(){
      // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
      Acquire(mutexDeslocamento);
      long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;
-     long desloc_cm = 2*PI*desloc_grau;
+     long desloc_cm = 2*PI*abs(desloc_grau)/360;
      // Atualizo o grau anterior do robo
      gr_ant_RE = RE_Atual;
      gr_ant_RD = RD_Atual;
      // Atualizo a distancia do proprio robo
 	 // em X
-	 long valor = orientacao*(PI/180.0);
-     deslocamento[0] = deslocamento[0] + Cos(valor)*desloc_cm;// seno e  cosseno recebem o valor em rads
+	 long direcao_rad = orientacao*(PI/180.0);
+     deslocamento[0] = deslocamento[0] + Cos(direcao_rad)*desloc_cm;// seno e  cosseno recebem o valor em rads
 	 // em Y
-     deslocamento[1] = deslocamento[1] + Sin(valor)*desloc_cm;
+     deslocamento[1] = deslocamento[1] + Sin(direcao_rad)*desloc_cm;
      //
 	Release(mutexDeslocamento);
 }

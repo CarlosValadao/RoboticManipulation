@@ -405,7 +405,49 @@ void achar_estoque(){
 	}
 }
 
-
+void achar_base(){
+	short subindo = 1;// para indicar que ele começa a busca pela porta subindo o mapa (indo por norte)
+	// Enquanto não tiver chegado no estoque
+	OnRevSync(MOTOR_ED, POWER+10, 0);
+	while((Sensor(LIGHT_OUT) < COR_PRETA_LMI || Sensor(LIGHT_OUT)> COR_PRETA_LMS) && (Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
+	}
+	Off(MOTOR_ED);
+	// Agora procuro a entrada do estoque (Aqui eu vou estar em frente ao possível preto)
+	// Giro esquerda
+	while(Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS){
+		// Se estou vendo a porta, encerro a busca
+		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
+			break;
+		}
+		// Se estou vendo uma parede, dou um 180
+		else if (Sensor(TOUCH_OUT)){
+		       girar_eixo_v2(-100*subindo);
+		       Off(MOTOR_ED);
+		       subindo = subindo*(-1);// para inverter os sentidos dos giros ao achar uma parede
+		}
+		// se estou vendo a linha preta
+		else if (Sensor(LIGHT_OUT) > COR_PRETA_LMI && Sensor(LIGHT_OUT) < COR_PRETA_LMS){
+			// dou ré
+			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			Off(MOTOR_ED);
+			// giro esquerda
+			girar_eixo_v2(100*subindo);
+			Off(MOTOR_ED);
+			// sigo em frente controlado pelo passo
+			segue_frente(true);
+			// Se não for o fim de curso, giro direita
+			if (!fim_de_curso()){
+				girar_eixo_v2(-100*subindo);
+				Off(MOTOR_ED);
+			}
+		}
+		else{
+			PlayTone(2000, 500);
+			// sigo em frente indefinido
+			segue_frente(false);
+		}
+	}
+}
 
 /////////////////////////////////////////////////////////////////
 void girar_eixo_v3(short turn_pct){
@@ -443,38 +485,45 @@ void girar_eixo_v3(short turn_pct){
 }
 
 void achar_bancada(){
+	short subindo = 1;
 	segue_frente(true);
 	girar_eixo_v2(-100);
 	Off(MOTOR_ED);
 	while (true){
-		if ((Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT)) && (orientacao == 90 || orientacao == 270)){
+		if ((Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT)) && (orientacao == 0 || orientacao == 180)){
 			segue_frente(true);
 			Off(MOTOR_ED);
 			turn180d();
 			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			Off(MOTOR_ED);
 			drop();
 			segue_frente(true);
 			grab();
 			segue_frente(true);
-			girar_eixo_v2(-100);
+			girar_eixo_v2(100*subindo);
+			Off(MOTOR_ED);
 			break;
 		}
-		if (fim_de_curso()){
-			//--- dou ré e giro esquerda
+		if (Sensor(TOUCH_OUT)){
+			turn180d();			
+			Off(MOTOR_ED);
+			subindo = subindo*(-1); // para inverter os sentidos dos giros ao achar uma parede
+		}
+		else if(isBlackColorDetected()){
 			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
 			Off(MOTOR_ED);
-			girar_eixo_v2(100);
+			girar_eixo_v2(100*subindo);
 			Off(MOTOR_ED);
-			// ando frente e giro direita
-			segue_frente(true);// sigo em frente controlado pelo passo
-			if (!fim_de_curso()){
-				girar_eixo_v2(-100);
+			segue_frente(true);
+			if (!isBlackColorDetected()){
+				girar_eixo_v2(-100*subindo);
 				Off(MOTOR_ED);
 			}
 		}
 		else{
 			// sigo em frente indefinido
 			segue_frente(false);
+			
 		}
 	}
 

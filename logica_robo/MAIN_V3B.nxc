@@ -500,7 +500,7 @@ void achar_bancada(){
 			segue_frente(true);
 			grab();
 			segue_frente(true);
-			girar_eixo_v2(100*subindo);
+			girar_eixo_v2(-100*subindo);
 			Off(MOTOR_ED);
 			break;
 		}

@@ -35,9 +35,9 @@ class RobotCommThread(QThread):
 class RobotArea(QFrame):
     def __init__(self):
         super().__init__()
-        self.robot_position = [35, 60]  # posição inicial do robô
+        self.robot_position = [30, 40]  # posição inicial do robô
         self.rastro = []  # lista para armazenar o rastro do robô
-        self.setFixedSize(500, 400)  # Definindo um tamanho fixo para a área do robô
+        self.setFixedSize(540, 360)  # Definindo um tamanho fixo para a área do robô
 
     def update_robot_position(self, new_position):
         self.robot_position = new_position
@@ -57,17 +57,17 @@ class RobotArea(QFrame):
         painter.setBrush(Qt.NoBrush)
         
         # recarga (esquerda)
-        painter.drawRect(20, 50, 50, 300)
+        painter.drawRect(1, 1, 80, 360)
 
         # estoque (direita)
-        painter.drawRect(self.width() - 70, 50, 50, 300)
+        painter.drawRect(self.width() - 81, 1, 80, 360)
 
         # desenhar as bancadas
-        square_width = 50
-        square_height = 50
-        offset_x = 175
-        offset_y = 75
-        spacing = 50
+        square_width = 60
+        square_height = 60
+        offset_x = 165
+        offset_y = 1
+        spacing = 89
         
         for row in range(3):
             for col in range(2):
@@ -90,7 +90,7 @@ class RobotInterface(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Controle do Robô')
-        self.setFixedSize(700, 400)  # Definindo um tamanho fixo para a janela principal
+        self.setFixedSize(800, 400)  # Definindo um tamanho fixo para a janela principal
 
         # layout principal
         self.main_layout = QHBoxLayout()
@@ -165,8 +165,8 @@ class RobotInterface(QWidget):
         robot_area_height = self.robot_area.height()
 
         # garante que o robô não saia dos limites da área
-        new_x = max(0, min(new_x + 150, robot_area_width - 20))  # -20 para manter o círculo visível
-        new_y = max(0, min(new_y + 150, robot_area_height - 20))
+        new_x = max(0, min(new_x + 40, robot_area_width - 20))  # -20 para manter o círculo visível
+        new_y = max(0, min(new_y + 30, robot_area_height - 20))
 
         # atualiza a posição do robô na área
         self.robot_area.update_robot_position([new_x, new_y])

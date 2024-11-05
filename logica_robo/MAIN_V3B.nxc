@@ -12,7 +12,7 @@
 #define CLOCKWISE           0
 #define COUNTERCLOCKWISE    1
 #define POWER               25
-#define GRAU_PARA_GIRO_90   260
+#define GRAU_PARA_GIRO_90   263
 #define GRAU_PARA_GIRO_90_2  295
 #define GRAU_PARA_GIRO_90_3  285
 //
@@ -377,7 +377,7 @@ task odometria(){
 		if (RobotInOperation){
 			TextOut(0, LCD_LINE1, "ROBÔ EM OPERACAO");
 			calcula_deslocamento();
-			Wait(100);
+			Wait(500);
 		}
 		else if(!RobotInOperation)
 		{

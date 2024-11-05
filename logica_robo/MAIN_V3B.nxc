@@ -1,6 +1,6 @@
 #include "RPP.h"
 
-#define MAX_BOX_MIN_DISTANCE 30
+#define MAX_BOX_MIN_DISTANCE 40
 #define DISTANCIA_ENTRE_RODAS 10 // cm
 #define DIAMETRO_RODA 5.6 // cm
 #define MOTOR_E   OUT_A // Motor da esquerda
@@ -8,7 +8,7 @@
 #define MOTOR_ED  OUT_AB
 #define CLAW      OUT_C
 //
-#define DEFAULT_CLAW_POWER  15
+#define DEFAULT_CLAW_POWER  50
 #define CLOCKWISE           0
 #define COUNTERCLOCKWISE    1
 #define POWER               25
@@ -47,7 +47,7 @@ void configureSensors();
 void calcula_deslocamento();
 void girar_eixo(short turn_pct);
 void muda_bussola(short turn_pct);
-void playBeep(short frequency, byte ntimes);
+//void playBeep(short frequency, byte ntimes);
 void segue_frente(bool control);
 void girar_eixo_v2(short turn_pct);
 bool fim_de_curso();
@@ -73,6 +73,8 @@ void achar_base();
 void turn180d2();
 void pegar_caixa();
 void sair_estoque();
+void playBeep(byte ntime);
+void achar_estoque();
 
 /*
 -----------------------
@@ -126,7 +128,14 @@ void handleSupervisorRequest(byte requestCodeb)
                PlayTone(2000, 200);
                Wait(1000);
           }
-          sair_base();
+          //sair_base();
+          //RotateMotorEx(MOTOR_ED, POWER, -200, 0, true, true);
+          //achar_estoque();
+          //pegar_caixa();
+          //sair_estoque();
+          //RotateMotorEx(MOTOR_ED, POWER, -200, 0, true, true);
+          achar_bancada();
+          achar_base();
      }
      else if (requestCodeb != GO)
      {
@@ -145,7 +154,7 @@ void treatSupervisorRequest()
      string recvdMessage;
      if (readMessage(recvdMessage))
      {
-          //ClearScreen();
+          ClearScreen();
           //Acquire(messageMutex);
           requestCode = parseMessage(recvdMessage);
           requestMsg = recvdMessage;
@@ -206,7 +215,6 @@ void girar_eixo_v2(short turn_pct){
 		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
 		Off(MOTOR_E);
 	}
-	
 	muda_bussola(turn_pct);
 }
 
@@ -271,12 +279,8 @@ void sair_base(){
 	while (true){
 		// Se estou vendo a porta, encerro a busca
 		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
-			Acquire(RobotInOperationMutex);
-			RobotInOperation = false;
-			Release(RobotInOperationMutex);
 			ClearScreen();
 			NumOut(5, LCD_LINE1, RobotInOperation);
-			Wait(5000);
 			break;
 		}
 		// Se estou no fim de curso
@@ -298,7 +302,6 @@ void sair_base(){
 			segue_frente(false);
 		}
 	}
-
 }
 
 
@@ -346,6 +349,7 @@ task sendRobotPosition(){
           //NumOut(0, LCD_LINE1, deslocamento[0]);
           //NumOut(0, LCD_LINE2, deslocamento[1]);
           Wait(900);
+          PlayTone(300, 1000);
           Acquire(RobotInOperationMutex);
           if (RobotInOperation){
                // Chama o mutex para não ler enquanto alguém muda
@@ -354,7 +358,12 @@ task sendRobotPosition(){
                Release(mutexDeslocamento);
                sendMessage(dataMsgToSend, POSITION);
           }
-          else if (!RobotInOperation) break;
+          else if (!RobotInOperation)
+          {
+	       	  PlayTone(300, 1000);
+	       	  Release(RobotInOperationMutex);
+		  break;
+          }          
           Release(RobotInOperationMutex);
      }
 
@@ -405,19 +414,30 @@ task readFirstSupervisorMessage()
           treatSupervisorRequest();
           if (RobotInOperation)
           {
-          	StartTask(sendRobotPosition);
-          	StartTask(odometria);
-               Release(RobotInOperationMutex);
+               	Release(RobotInOperationMutex);
+               	PlayTone(300, 2000);
                break;
           }
+          //playBeep(6);
           Release(RobotInOperationMutex);
      }
 }
 
 
+void playBeep(byte ntime)
+{
+	while (--ntime)
+	{
+		PlayTone(300, 500);
+		Wait(300);
+	}
+}
+
 void grab(){
-     RotateMotor(CLAW, 25, 90);
-     Off(CLAW);
+     //RotateMotor(CLAW, 25, 90);
+     //Off(CLAW);
+     OnFwd(CLAW, DEFAULT_CLAW_POWER);
+     Wait(1000);
 }
 
 void drop(){
@@ -549,6 +569,7 @@ void achar_base(){
 			segue_frente(false);
 		}
 	}
+        RotateMotorEx(MOTOR_ED, POWER, -150, 0, true, true);
 }
 
 /////////////////////////////////////////////////////////////////
@@ -588,11 +609,12 @@ void girar_eixo_v3(short turn_pct){
 
 void achar_bancada(){
 	short subindo = 1;
-	segue_frente(true);
+	//segue_frente(true);
+	RotateMotorEx(MOTOR_ED, POWER, -1025, 0, true, true);
 	girar_eixo_v2(-100);
 	Off(MOTOR_ED);
 	while (true){
-		if ((Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT)) && (orientacao == 0 || orientacao == 180)){
+		if (isSilverColorDetected() && (orientacao == 0 || orientacao == 180)){
 			segue_frente(true);
 			Off(MOTOR_ED);
 			turn180d();
@@ -606,7 +628,7 @@ void achar_bancada(){
 			Off(MOTOR_ED);
 			break;
 		}
-		if (Sensor(TOUCH_OUT)){
+		if (isTouched()){
 			turn180d();			
 			Off(MOTOR_ED);
 			subindo = subindo*(-1); // para inverter os sentidos dos giros ao achar uma parede

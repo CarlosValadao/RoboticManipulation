@@ -57,10 +57,10 @@ class RobotArea(QFrame):
         painter.setBrush(Qt.NoBrush)
         
         # recarga (esquerda)
-        painter.drawRect(1, 1, 80, 360)
+        painter.drawRect(1, 1, 80, 358)
 
         # estoque (direita)
-        painter.drawRect(self.width() - 81, 1, 80, 360)
+        painter.drawRect(self.width() - 81, 1, 80, 358)
 
         # desenhar as bancadas
         square_width = 60
@@ -165,11 +165,18 @@ class RobotInterface(QWidget):
         robot_area_height = self.robot_area.height()
 
         # garante que o robô não saia dos limites da área
-        new_x = max(0, min(new_x + 40, robot_area_width - 20))  # -20 para manter o círculo visível
-        new_y = max(0, min(new_y + 30, robot_area_height - 20))
+        new_x = max(0, min(new_x + 30, robot_area_width - 20))  # -20 para manter o círculo visível
+        new_y = max(0, min(new_y + 40, robot_area_height - 20))
 
         # atualiza a posição do robô na área
         self.robot_area.update_robot_position([new_x, new_y])
+
+        #if regiao == 0:
+            #self.robot_area.update_robot_position([30, 270])
+        #elif regiao == 1:
+            #self.robot_area.update_robot_position([260, 170])
+        #else:
+            #self.robot_area.update_robot_position([490, 270])
 
         # atualiza o campo de coordenadas com a nova posição do robô
         self.coordinates_label.setText(f'Coordenadas: ({new_x}, {new_y})')

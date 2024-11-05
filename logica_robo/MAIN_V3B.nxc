@@ -45,7 +45,7 @@ void handleSupervisorRequest(byte requestCodeb);
 void treatSupervisorRequest();
 void configureSensors();
 void calcula_deslocamento();
-void girar_eixo(short turn_pct);
+void girar_eixo(short turn_pct, long GRAU_GIRO);
 void muda_bussola(short turn_pct);
 //void playBeep(short frequency, byte ntimes);
 void segue_frente(bool control);
@@ -183,6 +183,39 @@ void configureSensors() {
     SetSensorLight(LIGHT_SENSOR);
 }
 
+void girar_eixo(short turn_pct, long GRAU_GIRO){
+	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	//
+	long passo_esquerdo = MotorRotationCount(MOTOR_E) + (-turn_pct/100)*GRAU_GIRO;
+	long passo_direito = MotorRotationCount(MOTOR_D) + (turn_pct/100)*GRAU_GIRO;
+	// Girando ambos
+	OnFwdSync(MOTOR_ED, POWER, turn_pct);
+	while ((MotorRotationCount(MOTOR_D) != passo_direito) && (MotorRotationCount(MOTOR_E) != passo_esquerdo)){}
+	Off(MOTOR_ED);
+	// Se estiver girando para esquerda
+	if(turn_pct == -100){
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) > passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) < passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	// Se estiver girando para direita
+	else{
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) < passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	muda_bussola(turn_pct);
+}
 
 void girar_eixo_v2(short turn_pct){
 	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO

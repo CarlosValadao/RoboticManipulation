@@ -14,6 +14,7 @@
 #define POWER               25
 #define GRAU_PARA_GIRO_90   260
 #define GRAU_PARA_GIRO_90_2  295
+#define GRAU_PARA_GIRO_90_3  285
 //
 #define COR_PRETA_LMI 28
 #define COR_PRETA_LMS 40
@@ -65,8 +66,14 @@ bool isRedColorDetected();
 bool isNotBoxPresent();
 unsigned int cm2deg(float cm);
 void goBackward30cm();
-void segue_frente_v2(bool control);
+void segue_frente_v2();
 void turn180d();
+void girar_eixo_v4(short turn_pct);
+void achar_base();
+void turn180d2();
+void pegar_caixa();
+void sair_estoque();
+
 /*
 -----------------------
     Global Variables
@@ -119,6 +126,7 @@ void handleSupervisorRequest(byte requestCodeb)
                PlayTone(2000, 200);
                Wait(1000);
           }
+          sair_base();
      }
      else if (requestCodeb != GO)
      {
@@ -202,6 +210,44 @@ void girar_eixo_v2(short turn_pct){
 	muda_bussola(turn_pct);
 }
 
+
+void girar_eixo_v4(short turn_pct){
+	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	//
+	long passo_esquerdo = MotorRotationCount(MOTOR_E) + (-turn_pct/100)*GRAU_PARA_GIRO_90_3;
+	long passo_direito = MotorRotationCount(MOTOR_D) + (turn_pct/100)*GRAU_PARA_GIRO_90_3;
+	// Girando ambos
+	OnFwdSync(MOTOR_ED, POWER, turn_pct);
+	while ((MotorRotationCount(MOTOR_D) != passo_direito) && (MotorRotationCount(MOTOR_E) != passo_esquerdo)){}
+	Off(MOTOR_ED);
+	// Se estiver girando para esquerda
+	if(turn_pct == -100){
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) > passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) < passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	// Se estiver girando para direita
+	else{
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) < passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	
+	muda_bussola(turn_pct);
+}
+
+
+
 bool fim_de_curso(){
 	// Se o sensor de toque foi acionado ou se estou lendo um valor que está no intervalo da cor preta
 	if ( Sensor(TOUCH_SENSOR) || (Sensor(LIGHT_OUT) > COR_PRETA_LMI && Sensor(LIGHT_OUT) < COR_PRETA_LMS)){
@@ -225,6 +271,12 @@ void sair_base(){
 	while (true){
 		// Se estou vendo a porta, encerro a busca
 		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
+			Acquire(RobotInOperationMutex);
+			RobotInOperation = false;
+			Release(RobotInOperationMutex);
+			ClearScreen();
+			NumOut(5, LCD_LINE1, RobotInOperation);
+			Wait(5000);
 			break;
 		}
 		// Se estou no fim de curso
@@ -246,6 +298,37 @@ void sair_base(){
 			segue_frente(false);
 		}
 	}
+
+}
+
+
+void sair_estoque(){
+	girar_eixo_v2(-100);// Giro para direita
+	Off(MOTOR_ED);
+	while (true){
+		// Se estou vendo a porta, encerro a busca
+		if (Sensor(LIGHT_OUT) > COR_PRATA_LMI && Sensor(LIGHT_OUT) < COR_PRATA_LMS){
+			break;
+		}
+		// Se estou no fim de curso
+		if (fim_de_curso()){
+			//--- dou ré e giro esquerda
+			RotateMotorEx(MOTOR_ED, POWER, 200, 0, true, true);
+			Off(MOTOR_ED);
+			girar_eixo_v2(100);
+			Off(MOTOR_ED);
+			// ando frente e giro direita
+			segue_frente(true);// sigo em frente controlado pelo passo
+			if (!fim_de_curso()){
+				girar_eixo_v2(-100);
+				Off(MOTOR_ED);
+			}
+		}
+		else{
+			// sigo em frente indefinido
+			segue_frente(false);
+		}
+	}
 }
 
 
@@ -258,9 +341,10 @@ every one sec
 // para quebrar o laco (com break)
 task sendRobotPosition(){
 	while (1)
-     {    ClearScreen();
-          NumOut(0, LCD_LINE1, deslocamento[0]);
-          NumOut(0, LCD_LINE2, deslocamento[1]);
+     	{
+     	  //ClearScreen();
+          //NumOut(0, LCD_LINE1, deslocamento[0]);
+          //NumOut(0, LCD_LINE2, deslocamento[1]);
           Wait(900);
           Acquire(RobotInOperationMutex);
           if (RobotInOperation){
@@ -270,10 +354,41 @@ task sendRobotPosition(){
                Release(mutexDeslocamento);
                sendMessage(dataMsgToSend, POSITION);
           }
+          else if (!RobotInOperation) break;
           Release(RobotInOperationMutex);
      }
 
 }
+/*
+Calcula a distância Percorrida a cada X tempos
+*/
+task odometria(){
+	/*
+	short i;
+	for (i = 392; i < 1319; i=i+102){
+		PlayTone(i, 700);
+		Wait(500);
+	}
+	*/
+	while (1)
+	{
+		//TextOut(6, LCD_LINE1, "ODOMETRIA RODANDO");
+		Acquire(RobotInOperationMutex);
+		if (RobotInOperation){
+			TextOut(0, LCD_LINE1, "ROBÔ EM OPERACAO");
+			calcula_deslocamento();
+			Wait(100);
+		}
+		else if(!RobotInOperation)
+		{
+			TextOut(0, LCD_LINE1, "SAINDO ODO");
+			Wait(1000);
+			break;
+		}
+		Release(RobotInOperationMutex);
+	}
+}
+
 
 /*
 Read Supervisor messages and
@@ -290,30 +405,15 @@ task readFirstSupervisorMessage()
           treatSupervisorRequest();
           if (RobotInOperation)
           {
+          	StartTask(sendRobotPosition);
+          	StartTask(odometria);
                Release(RobotInOperationMutex);
                break;
           }
           Release(RobotInOperationMutex);
      }
 }
-/*
-Calcula a distância Percorrida a cada X tempos
-*/
-task odometria(){
-	short i;
-	for (i = 392; i < 1319; i=i+102){
-		PlayTone(i, 700);
-		Wait(500);
-	}
 
-	startOdometerCalc:
-	while (RobotInOperation){
-		//calcula_deslocamento();
-		Wait(100);
-	}
-	while (!RobotInOperation);
-	goto startOdometerCalc;
-}
 
 void grab(){
      RotateMotor(CLAW, 25, 90);
@@ -342,8 +442,8 @@ void muda_bussola(short turn_pct){
 
 void calcula_deslocamento(){
      // Pego o grau atual
-     long RE_Atual = MotorRotationCount(MOTOR_E);
-     long RD_Atual = MotorRotationCount(MOTOR_D);
+     long RE_Atual = abs(MotorRotationCount(MOTOR_E));
+     long RD_Atual = abs(MotorRotationCount(MOTOR_D));
      // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
      Acquire(mutexDeslocamento);
      long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;
@@ -353,10 +453,12 @@ void calcula_deslocamento(){
      gr_ant_RD = RD_Atual;
      // Atualizo a distancia do proprio robo
 	 // em X
-	 long direcao_rad = orientacao*(PI/180.0);
+     long direcao_rad = orientacao*(PI/180.0);
      deslocamento[0] = deslocamento[0] + Cos(direcao_rad)*desloc_cm;// seno e  cosseno recebem o valor em rads
 	 // em Y
      deslocamento[1] = deslocamento[1] + Sin(direcao_rad)*desloc_cm;
+     NumOut(5, LCD_LINE1, gr_ant_RE);
+     NumOut(5, LCD_LINE2, gr_ant_RD);
      //
 	Release(mutexDeslocamento);
 }
@@ -531,8 +633,8 @@ void achar_bancada(){
 
 void goBackward30cm()
 {
-     long passo_g = MotorRotationCount(MOTOR_D) + 613;
-     RotateMotorEx(MOTOR_ED, POWER, passo_g, 0, true, true);
+     long passo_g = abs(MotorRotationCount(MOTOR_D)) + 613;
+     RotateMotorEx(MOTOR_ED, POWER, 613, 0, true, true);
      Off(MOTOR_ED);
 }
 
@@ -540,12 +642,12 @@ void turn180d()
 {
      girar_eixo_v2(-100);
      Wait(1000);
-     girar_eixo_v3(-100);// era v3
+     girar_eixo_v4(-100);// era v3
 }
 
 bool isBoxPresent()
 {
-     return (getRobotDistance() == MAX_BOX_MIN_DISTANCE && isNotTouched() ? true : false);
+     return (getRobotDistance() <= MAX_BOX_MIN_DISTANCE && isNotTouched() ? true : false);
 }
 
 bool isTouched()
@@ -589,7 +691,56 @@ bool isNotBoxPresent()
 }		
 			
 
+void pegar_caixa()
+{
+	RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+     	Off(MOTOR_ED);
+	girar_eixo_v2(-100);
+	Wait(1000);
+	if (isBoxPresent())
+	{
+		PlaySound(SOUND_FAST_UP);
+		turn180d();
+		drop();
+		Off(MOTOR_ED);
+		goBackward30cm();
+		grab();
+		return;
+	}
+	turn180d();
+	Wait(1000);
+	if (isBoxPresent())
+	{
+		PlaySound(SOUND_FAST_UP);
+		turn180d();
+		drop();
+		Off(MOTOR_ED);
+		goBackward30cm();
+		grab();
+	}
+}
+
+void turn180d2()
+{
+     girar_eixo_v2(-100);
+     Wait(1000);
+     girar_eixo_v3(-100);// era v3
+}
+
+
+void segue_frente_v2()
+{
+	long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
+	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
+	OnRevSync(MOTOR_ED, POWER, 0);
+	while(isNotBoxPresent());
+	Off(MOTOR_ED);
+}
+
+
+
 task main (){
+     SetVolume(100);
      regiao = 0;
      //
      orientacao = 90; // Começa voltado pro norte do mapa
@@ -597,15 +748,25 @@ task main (){
      deslocamento[0] = 0;
      deslocamento[1] = 0;
      //
+     //RobotInOperation = true;
+     //
      gr_ant_RE = MotorRotationCount(MOTOR_E);
      gr_ant_RD = MotorRotationCount(MOTOR_D);
      configureSensors();
-     //StartTask(readFirstSupervisorMessage);
+     StartTask(readFirstSupervisorMessage);
      //StartTask(sendRobotPosition);
+     //StartTask(odometria);
      // restante do codigo do robo
-     sair_base();
-     RotateMotorEx(MOTOR_ED, POWER, -100, 0, true, true);
-     achar_estoque();
+     //OnFwdSync(MOTOR_ED, POWER+20, 0);
+     //Off(MOTOR_ED);
+     //segue_frente_v2();
+     //sair_base();
+     //achar_estoque();
+     //achar_bancada();
+     //achar_base();
+     //pegar_caixa();
+     ///sair_estoque();
+     //turn180d();
      //Wait(500);
      //OnRevSync(MOTOR_ED, POWER+20,0);
      //while((Sensor(LIGHT_OUT) < COR_PRATA_LMI || Sensor(LIGHT_OUT)> COR_PRATA_LMS)){
@@ -634,3 +795,4 @@ task main (){
 
 
 // - fazer teste para chegar no estoque
+

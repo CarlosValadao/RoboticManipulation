@@ -377,7 +377,7 @@ task odometria(){
 		if (RobotInOperation){
 			TextOut(0, LCD_LINE1, "ROBÔ EM OPERACAO");
 			calcula_deslocamento();
-			Wait(100);
+			Wait(500);
 		}
 		else if(!RobotInOperation)
 		{

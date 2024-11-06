@@ -495,8 +495,8 @@ void muda_bussola(short turn_pct){
 
 void calcula_deslocamento(){
      // Pego o grau atual
-     long RE_Atual = abs(MotorRotationCount(MOTOR_E));
-     long RD_Atual = abs(MotorRotationCount(MOTOR_D));
+     long RE_Atual = MotorRotationCount(MOTOR_E);
+     long RD_Atual = MotorRotationCount(MOTOR_D);
      // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
      Acquire(mutexDeslocamento);
      long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;

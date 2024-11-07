@@ -10,6 +10,8 @@ from time import sleep
 from os import name, system
 from Assets import datetime_formated
 
+import math
+
 # By default use MAILBOX1 to send messages
 # and MAILBOX10 to receive reponse messages
 #     MAILBOX3  to receive data messages
@@ -89,7 +91,17 @@ class SupervisorClient:
                 data = RPP.parse_message(received_message)
                 if is_data_msg:
                     with self._msg_data_lock:
-                        self._recv_data_msg.append(data)
+                        vetor_desc_tmp = [0,0] # Vetor deslocamento x,y
+                        desloc = data[0] # O quanto o robô se deslocou
+                        angulo = data[1] # A orientação do deslocamento do robô
+                        orientacao_rad = math.radians(angulo) # Conversão do angulo para radianos
+                        regiao = data[2]
+                        # Para o deslocamento em X
+                        vetor_desc_tmp[0] = self._recv_data_msg[0][0] + desloc*math.cos(orientacao_rad) 
+                        # Para o deslocamento em Y
+                        vetor_desc_tmp[1] = self._recv_data_msg[0][1] + desloc*math.sin(orientacao_rad)
+                        self._recv_data_msg.append((vetor_desc_tmp[0], vetor_desc_tmp[1], regiao))
+                        # self._recv_data_msg.append(data)
                 else:
                     with self._msg_data_lock:
                         self._recv_response_msg.append(data)

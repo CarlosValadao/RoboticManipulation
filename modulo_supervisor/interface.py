@@ -2,7 +2,7 @@ import sys
 from time import sleep
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QFrame, QLabel
-from PyQt5.QtGui import QPainter, QColor
+from PyQt5.QtGui import QPainter, QColor, QFont
 import SupervisorClient
 from threading import Thread
 from constants import NXT_BLUETOOTH_MAC_ADDRESS
@@ -95,6 +95,12 @@ class RobotInterface(QWidget):
         # layout principal
         self.main_layout = QHBoxLayout()
 
+        # Configura a fonte
+        font = QFont()
+        font.setPointSize(11)
+        label_width = 190  # Largura desejada
+        label_height = 50  # Altura desejada
+
         # cria um painel lateral para o botão e as coordenadas
         self.control_panel = QFrame(self)
         self.control_panel.setFixedWidth(200)
@@ -113,10 +119,29 @@ class RobotInterface(QWidget):
 
         # exibe a região do robô
         self.region_label = QLabel('Região: Base', self)
+        self.region_label.setFont(font)
         self.control_layout.addWidget(self.region_label)
+        self.region_label.setFixedSize(label_width, label_height)
+        # Configura a borda da QLabel
+        self.region_label.setStyleSheet(f"""
+            QLabel {{
+                border: 2px solid black;  /* Define a borda preta com 2px de espessura */
+                padding: 5px;  /* Adiciona um espaçamento interno */
+            }}
+        """)
 
         # exibe as coordenadas do robô
         self.coordinates_label = QLabel('Coordenadas: (150, 150)', self)
+        self.coordinates_label.setFont(font)
+        # Define a largura e altura da label
+        self.coordinates_label.setFixedSize(label_width, label_height)
+        # Configura a borda da QLabel
+        self.coordinates_label.setStyleSheet(f"""
+            QLabel {{
+                border: 2px solid black;  /* Define a borda preta com 2px de espessura */
+                padding: 5px;  /* Adiciona um espaçamento interno */
+            }}
+        """)
         self.control_layout.addWidget(self.coordinates_label)
 
         # layout do painel de controle
@@ -146,10 +171,26 @@ class RobotInterface(QWidget):
             supervisor_client.send_message(request_code=0)
             
     def control_interface(self, control):
+        control = 3  # Simulando a condição de ativação
         if control == 3:
             self.robot_active = True
-            self.button.setText('Robô Ativado')
+            self.button.setText('Iniciando')
             self.button.setEnabled(False)
+            
+            # Temporizador para trocar a cor do botão por 3 segundos
+            self.button.setStyleSheet("background-color: yellow; color: black;")  # Altera a cor temporária
+
+            timer = QTimer(self)
+            timer.setSingleShot(True)  # Para que o timer execute apenas uma vez após 3 segundos
+
+            # Função chamada após 3 segundos
+            def finish_activation():
+                self.button.setText('Robô Ativado')
+                self.button.setStyleSheet("")  # Reseta o estilo para o padrão
+                # Inicie outras ações aqui, como `self.position_thread.start()`
+
+            timer.timeout.connect(finish_activation)
+            timer.start(3000)  # 3 segundos
             self.robot_area.rastro.clear()
             self.position_thread.start()
         elif control == 2:

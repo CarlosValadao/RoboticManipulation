@@ -7,6 +7,7 @@ import SupervisorClient
 from threading import Thread
 from constants import NXT_BLUETOOTH_MAC_ADDRESS
 from os import environ
+from math import ceil
 
 # thread para enviar as coordenadas do robô
 
@@ -20,6 +21,8 @@ class RobotPositionThread(QThread):
             if(received_messages):
                 for data_msg in received_messages:
                     (new_x, new_y, region) = data_msg
+                    new_x = ceil(new_x) 
+                    new_y = ceil(new_y)
                     self.position_updated.emit(new_x, new_y, region)
                     
 class RobotCommThread(QThread):
@@ -35,7 +38,7 @@ class RobotCommThread(QThread):
 class RobotArea(QFrame):
     def __init__(self):
         super().__init__()
-        self.robot_position = [30, 40]  # posição inicial do robô
+        self.robot_position = [20, 340]  # posição inicial do robô
         self.rastro = []  # lista para armazenar o rastro do robô
         self.setFixedSize(540, 360)  # Definindo um tamanho fixo para a área do robô
 
@@ -131,7 +134,7 @@ class RobotInterface(QWidget):
         """)
 
         # exibe as coordenadas do robô
-        self.coordinates_label = QLabel('Coordenadas: (150, 150)', self)
+        self.coordinates_label = QLabel('Coordenadas: (0, 0)', self)
         self.coordinates_label.setFont(font)
         # Define a largura e altura da label
         self.coordinates_label.setFixedSize(label_width, label_height)
@@ -171,7 +174,6 @@ class RobotInterface(QWidget):
             supervisor_client.send_message(request_code=0)
             
     def control_interface(self, control):
-        control = 3  # Simulando a condição de ativação
         if control == 3:
             self.robot_active = True
             self.button.setText('Iniciando')
@@ -204,11 +206,11 @@ class RobotInterface(QWidget):
         # limita a posição do robô
         robot_area_width = self.robot_area.width()
         robot_area_height = self.robot_area.height()
-
         # garante que o robô não saia dos limites da área
-        new_x = max(0, min(new_x + 30, robot_area_width - 20))  # -20 para manter o círculo visível
-        new_y = max(0, min(new_y + 40, robot_area_height - 20))
-
+        new_x = max(0, min(new_x + 20, robot_area_width - 20))  # -20 para manter o círculo visível
+        new_y = max(0, min(150 - new_y, robot_area_height - 20))
+        new_x = new_x * 2
+        new_y = new_y * 2
         # atualiza a posição do robô na área
         self.robot_area.update_robot_position([new_x, new_y])
 

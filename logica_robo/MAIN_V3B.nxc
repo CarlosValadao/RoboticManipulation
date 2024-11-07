@@ -14,9 +14,9 @@
 #define POWER               30
 #define GRAU_PARA_GIRO_90   260
 #define GRAU_PARA_GIRO_90_2  295
-#define GRAU_PARA_GIRO_90_3  285
-#define GRAU_PARA_GIRO_90_4 65
-#define GRAU_PARA_GIRO_90_5 50
+#define GRAU_PARA_GIRO_90_3  295
+#define GRAU_PARA_GIRO_90_4 30
+#define GRAU_PARA_GIRO_90_5 45
 
 //
 #define COR_PRETA_LMI 28
@@ -92,17 +92,16 @@ void girar_eixo_v6(short turn_pct);
 void goBackward30cm2();
 
 float seno(int grau){
-	if (grau==0) return 0.0;
-	else if(grau==90) return 1.0;
-	else if(grau==180) return 0.0;
-	else if(grau==270) return -1.0;
+	if (grau==0) return 0; 
+	else if(grau==90) return 1;
+	else if(grau==180) return 0;
+	else if(grau==270) return -1;
 }
-
 float cosseno(int grau){
-	if (grau==0) return 1.0;
-	else if(grau==90) return 0.0;
-	else if(grau==180) return -1.0;
-	else if(grau==270) return 0.0;
+	if (grau==0) return 1; 
+	else if(grau==90) return 0;
+	else if(grau==180) return -1;
+	else if(grau==270) return 0;
 }
 /*
 -----------------------
@@ -419,7 +418,7 @@ void sair_estoque(){
 			// ando frente e giro direita
 			segue_frente(true);// sigo em frente controlado pelo passo
 			if (!fim_de_curso()){
-				girar_eixo_v2(-100);
+				girar_eixo_v2(100);
 				Off(MOTOR_ED);
 			}
 		}
@@ -451,7 +450,6 @@ every one sec
 // falta adicionar uma variavel de controle
 // para quebrar o laco (com break)
 task sendRobotPosition(){
-	playBeep(3);
 	while (1)
      	{
      	  //ClearScreen();
@@ -467,7 +465,6 @@ task sendRobotPosition(){
                //formatDataMessage(0, 0, regiao, dataMsgToSend);
                Release(mutexDeslocamento);
                sendMessage(dataMsgToSend, POSITION);
-               playBeep(2);
           }
           /*else if (!RobotInOperation)
           {
@@ -582,17 +579,17 @@ void calcula_deslocamento(){
      long RD_Atual = MotorRotationCount(MOTOR_D);
      // Com esta conta eu tenho o deslocamento nulo ao girar no proprio eixo
      long desloc_grau = ((RE_Atual -gr_ant_RE) + (RD_Atual -gr_ant_RD))/2;
-     float desloc_cm = (2*PI*(DIAMETRO_RODA/2)*abs(desloc_grau)/360);
+     float desloc_cm = -((2*PI*(DIAMETRO_RODA/2)*desloc_grau)/360);
      // Atualizo o grau anterior do robo
      gr_ant_RE = RE_Atual;
      gr_ant_RD = RD_Atual;
      // Atualizo a distancia do proprio robo
 	 // em X
     //  float direcao_rad = orientacao*(PI/180.0);
-        deslocamento[0] = deslocamento[0] + cosseno(orientacao)*desloc_cm;// seno e  cosseno recebem o valor em rads
+      deslocamento[0] = deslocamento[0] + cosseno(orientacao)*desloc_cm;// seno e  cosseno recebem o valor em rads
 	//deslocamento[0] = desloc_cm;
 	 // em Y
-        deslocamento[1] = deslocamento[1] + seno(orientacao)*desloc_cm;
+     deslocamento[1] = deslocamento[1] + seno(orientacao)*desloc_cm;
 	//deslocamento[1] = orientacao;
     //  NumOut(5, LCD_LINE1, gr_ant_RE);
     //  NumOut(5, LCD_LINE2, gr_ant_RD);
@@ -604,7 +601,7 @@ void segue_frente_v3()
 {
 	OnRev(OUT_A, POWER+3);
 	OnRev(OUT_B, POWER);
-	//OnRevSync(OUT_AB, POWER+10, 0);
+	//OnRevSync(OUT_AB, POWER, 0);
 	while (!isBlackColorDetected() && !isSilverColorDetected());
 	Off(MOTOR_ED);
 }
@@ -767,10 +764,10 @@ void goFoward30cmBetter()
 }
 
 void achar_bancada(){
-	playAlertBeep(7);
-	grab();
-	if (whichSide == RIGHT_SIDE) girar_eixo_v6(100);
-	else if (whichSide == LEFT_SIDE) girar_eixo_v6(-100);
+	playAlertBeep(3);
+	//grab();
+	//if (whichSide == RIGHT_SIDE) girar_eixo_v6(100);
+	//else if (whichSide == LEFT_SIDE) girar_eixo_v6(-100);
 	RotateMotorEx(MOTOR_ED, POWER, -1420, 0, true, true);
 	//girar_eixo_v6(100);
 	//playBeep(4);
@@ -781,6 +778,9 @@ void achar_bancada(){
 	Off(MOTOR_ED);
 	while (true){
 		if (isSilverColorDetected() && (orientacao == 90 || orientacao == 270)){
+			Acquire(strangleBoxMutex);
+			strangleBox = false;
+			Release(strangleBoxMutex);
 			Wait(200);
 			segue_frente(true);
 			Off(MOTOR_ED);
@@ -830,7 +830,7 @@ void goBackward30cm()
 
 void goBackward30cm2()
 {
-     RotateMotorEx(MOTOR_ED, POWER, 655, 0, true, true);
+     RotateMotorEx(MOTOR_ED, POWER+5, 780, 0, true, true);
      Off(MOTOR_ED);
 }
 
@@ -901,7 +901,7 @@ void pegar_caixa()
 	Acquire(RobotInOperationMutex);
 	regiao = 2;
 	Release(RobotInOperationMutex);
-	RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+	RotateMotorEx(MOTOR_ED, POWER, -605, 0, true, true);
      	Off(MOTOR_ED);
      	//goFoward30cm();
 	girar_eixo_v2(-100);
@@ -916,7 +916,8 @@ void pegar_caixa()
 		drop();
 		Off(MOTOR_ED);
 		goBackward30cm2();
-		grab();
+		//grab();
+		StartTask(strangleBoxe);
 		//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
 		return;
 	}
@@ -924,6 +925,7 @@ void pegar_caixa()
 	Wait(1000);
 	if (isBoxPresent())
 	{
+		girar_eixo_v5(100);
 		//Acquire(whichSideMutex);
 		whichSide = RIGHT_SIDE;
 		//Release(whichSideMutex);
@@ -931,12 +933,14 @@ void pegar_caixa()
 		turn180d();
 		drop();
 		Off(MOTOR_ED);
-		goBackward30cm();
-		grab();
+		goBackward30cm2();
+		//grab();
+		StartTask(strangleBoxe);
 		//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
 		return;
 	}
 	girar_eixo_v5(100);
+	//segue_frente_v2();
 	turn180d();
 	Wait(1000);
 	if (isBoxPresent())
@@ -949,7 +953,8 @@ void pegar_caixa()
 		drop();
 		Off(MOTOR_ED);
 		goBackward30cm();
-		grab();
+		//grab();
+		StartTask(strangleBoxe);
 		RotateMotorEx(MOTOR_ED, POWER, -100, 0, true, true);
 		return;
 	}
@@ -965,9 +970,12 @@ void pegar_caixa()
 		drop();
 		Off(MOTOR_ED);
 		goBackward30cm();
-		grab();
+		//grab();
+		StartTask(strangleBoxe);
 		RotateMotorEx(MOTOR_ED, POWER, -100, 0, true, true);
+		return;
 	}
+	segue_frente_v2();
 	playAlertBeep(5);
 }
 
@@ -981,11 +989,12 @@ void turn180d2()
 
 void segue_frente_v2()
 {
-	long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
+	//long passo_r = abs(MotorRotationCount(MOTOR_D)) + PASSO_BUSCA;//passo requerido
 	// Sigo em frente enquanto: não achar linha preta, não achar linha prata, não achar parede, não tiver dado o passo de busca
 	OnRevSync(MOTOR_ED, POWER, 0);
 	while(isNotBoxPresent());
 	Off(MOTOR_ED);
+	
 }
 
 void playAlertBeep(byte ntime)
@@ -1021,7 +1030,8 @@ task main (){
      sair_base();
      achar_estoque();
      pegar_caixa();
-     sair_estoque();
+//     sair_estoque();
+     sair_base();
      achar_bancada();
      achar_base();
 	 //RotateMotorEx(MOTOR_ED, POWER, -360, 0, true, true);

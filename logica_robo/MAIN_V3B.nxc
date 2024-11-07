@@ -91,6 +91,19 @@ void goFoward30cmBetter();
 void girar_eixo_v6(short turn_pct);
 void goBackward30cm2();
 
+float seno(int grau){
+	if (grau==0) return 0.0;
+	else if(grau==90) return 1.0;
+	else if(grau==180) return 0.0;
+	else if(grau==270) return -1.0;
+}
+
+float cosseno(int grau){
+	if (grau==0) return 1.0;
+	else if(grau==90) return 0.0;
+	else if(grau==180) return -1.0;
+	else if(grau==270) return 0.0;
+}
 /*
 -----------------------
     Global Variables
@@ -576,11 +589,11 @@ void calcula_deslocamento(){
      // Atualizo a distancia do proprio robo
 	 // em X
     //  float direcao_rad = orientacao*(PI/180.0);
-    //  deslocamento[0] = deslocamento[0] + Cos(direcao_rad)*desloc_cm;// seno e  cosseno recebem o valor em rads
-	deslocamento[0] = desloc_cm;
+        deslocamento[0] = deslocamento[0] + cosseno(orientacao)*desloc_cm;// seno e  cosseno recebem o valor em rads
+	//deslocamento[0] = desloc_cm;
 	 // em Y
-    //  deslocamento[1] = deslocamento[1] + Sin(direcao_rad)*desloc_cm;
-	deslocamento[1] = orientacao;
+        deslocamento[1] = deslocamento[1] + seno(orientacao)*desloc_cm;
+	//deslocamento[1] = orientacao;
     //  NumOut(5, LCD_LINE1, gr_ant_RE);
     //  NumOut(5, LCD_LINE2, gr_ant_RD);
      //

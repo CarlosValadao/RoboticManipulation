@@ -15,9 +15,10 @@
 #define GRAU_PARA_GIRO_90   260
 #define GRAU_PARA_GIRO_90_2  295
 #define GRAU_PARA_GIRO_90_3  295
-#define GRAU_PARA_GIRO_90_4 30
+#define GRAU_PARA_GIRO_90_4 45
 #define GRAU_PARA_GIRO_90_5 45
-
+#define GRAU_PARA_GIRO_90_6 15
+#define GRAU_PARA_GIRO_90_7 320
 //
 #define COR_PRETA_LMI 28
 #define COR_PRETA_LMS 40
@@ -90,6 +91,13 @@ void segue_frente_v4();
 void goFoward30cmBetter();
 void girar_eixo_v6(short turn_pct);
 void goBackward30cm2();
+void girar_eixo_v7(short turn_pct);
+void girar_eixo_v8(short turn_pct);
+float seno(int grau);
+float cosseno(int grau);
+void pegar_caixa_v2();
+void turn180d3();
+
 
 float seno(int grau){
 	if (grau==0) return 0; 
@@ -211,6 +219,77 @@ void configureSensors() {
     SetSensorLight(LIGHT_SENSOR);
 }
 
+
+void girar_eixo_v7(short turn_pct)
+{
+	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	//
+	long passo_esquerdo = MotorRotationCount(MOTOR_E) + (-turn_pct/100)*GRAU_PARA_GIRO_90_6;
+	long passo_direito = MotorRotationCount(MOTOR_D) + (turn_pct/100)*GRAU_PARA_GIRO_90_6;
+	// Girando ambos
+	OnFwdSync(MOTOR_ED, POWER, turn_pct);
+	while ((MotorRotationCount(MOTOR_D) != passo_direito) && (MotorRotationCount(MOTOR_E) != passo_esquerdo)){}
+	Off(MOTOR_ED);
+	// Se estiver girando para esquerda
+	if(turn_pct == -100){
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) > passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) < passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	// Se estiver girando para direita
+	else{
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) < passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+}
+
+
+void girar_eixo_v8(short turn_pct)
+{
+
+	//calcula_deslocamento();// PRECISO CHAMAR PARA EVITAR UM CALCULO EM UMA DIREÇÃO ERRADO
+	//
+	long passo_esquerdo = MotorRotationCount(MOTOR_E) + (-turn_pct/100)*GRAU_PARA_GIRO_90_7;
+	long passo_direito = MotorRotationCount(MOTOR_D) + (turn_pct/100)*GRAU_PARA_GIRO_90_7;
+	// Girando ambos
+	OnFwdSync(MOTOR_ED, POWER, turn_pct);
+	while ((MotorRotationCount(MOTOR_D) != passo_direito) && (MotorRotationCount(MOTOR_E) != passo_esquerdo)){}
+	Off(MOTOR_ED);
+	// Se estiver girando para esquerda
+	if(turn_pct == -100){
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) > passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) < passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+	// Se estiver girando para direita
+	else{
+		// Girando oq falta
+		OnFwd(MOTOR_D, (turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_D) < passo_direito){}
+		Off(MOTOR_D);
+		// Girando oq falta
+		OnFwd(MOTOR_E, (-turn_pct/100)*POWER);
+		while (MotorRotationCount(MOTOR_E) > passo_esquerdo){}
+		Off(MOTOR_E);
+	}
+
+}
 
 void girar_eixo_v2(short turn_pct){
 	Acquire(mutexDeslocamento);
@@ -431,6 +510,16 @@ void sair_estoque(){
 }
 
 
+task decideSide()
+{
+	Wait(19000);
+	Acquire(RobotInOperationMutex);
+	if (regiao == 1) whichSide = RIGHT_SIDE;
+	else if (regiao == 0) whichSide = LEFT_SIDE;
+	Release(RobotInOperationMutex);
+}
+
+
 task strangleBoxe()
 {
     while (1)
@@ -599,7 +688,7 @@ void calcula_deslocamento(){
 
 void segue_frente_v3()
 {
-	OnRev(OUT_A, POWER+3);
+	OnRev(OUT_A, POWER+2);
 	OnRev(OUT_B, POWER);
 	//OnRevSync(OUT_AB, POWER, 0);
 	while (!isBlackColorDetected() && !isSilverColorDetected());
@@ -710,7 +799,7 @@ void achar_base(){
 			segue_frente(false);
 		}
 	}
-    RotateMotorEx(MOTOR_ED, POWER, -600, 0, true, true);
+    	RotateMotorEx(MOTOR_ED, POWER, -660, 0, true, true);
 	Acquire(RobotInOperationMutex);
 	regiao = 0;
 	Release(RobotInOperationMutex);
@@ -792,6 +881,7 @@ void achar_bancada(){
 			segue_frente(true);
 			grab();
 			segue_frente(true);
+			girar_eixo_v7(100*subindo);
 			girar_eixo_v2(-100*subindo);
 			Off(MOTOR_ED);
 			break;
@@ -896,6 +986,448 @@ bool isNotBoxPresent()
 }		
 			
 
+void tentar_pegar_caixa_d()
+{
+	turn180d();
+	drop();
+	Off(MOTOR_ED);
+	goBackward30cm2();
+	grab();
+}
+
+
+void tentar_pegar_caixa_e()
+{
+	turn180d();
+	drop();
+	Off(MOTOR_ED);
+	goBackward30cm();
+	grab();
+}
+
+
+bool scan_for_the_box(int signal)
+{
+	if (isBoxPresent()) return true;
+	girar_eixo_v5(100*signal);
+	Wait(1000);
+	if (isBoxPresent()) return true;
+	girar_eixo_v5(-100*signal);
+	Wait(1000);
+	girar_eixo_v5(-100*signal);
+	Wait(1000);
+	if (isBoxPresent()) return true;
+	girar_eixo_v5(100*signal);
+	return false;
+}	
+
+
+void pegar_caixa_v2()
+{
+	Acquire(RobotInOperationMutex);
+	regiao = 2;
+	Release(RobotInOperationMutex);
+	RotateMotorEx(MOTOR_ED, POWER, -605, 0, true, true);
+     	Off(MOTOR_ED);
+     	//goFoward30cm();
+     	if (whichSide == RIGHT_SIDE)
+     	{
+     		playBeep(3);
+     		//playAlertBeep(3);
+		girar_eixo_v2(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			PlaySound(SOUND_FAST_UP);
+			turn180d();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(500);
+		girar_eixo_v5(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(-100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(1000);
+		RotateMotorEx(MOTOR_ED, POWER, -206, 0, true, true);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			PlaySound(SOUND_FAST_UP);
+			turn180d();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(500);
+		girar_eixo_v5(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(-100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(1000);
+		RotateMotorEx(MOTOR_ED, POWER, -206, 0, true, true);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			PlaySound(SOUND_FAST_UP);
+			turn180d();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(500);
+		girar_eixo_v5(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(-100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(1000);
+		RotateMotorEx(MOTOR_ED, POWER, -206, 0, true, true);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			PlaySound(SOUND_FAST_UP);
+			turn180d();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(500);
+		girar_eixo_v5(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(-100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(1000);
+	} // IF whichSide
+	//segue_frente_v2();
+	else if (whichSide == LEFT_SIDE)
+	{
+		playBeep(5);
+		girar_eixo_v2(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			PlaySound(SOUND_FAST_UP);
+			turn180d();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(500);
+		girar_eixo_v5(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(-100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(1000);
+		RotateMotorEx(MOTOR_ED, POWER, -206, 0, true, true);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			PlaySound(SOUND_FAST_UP);
+			turn180d();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(500);
+		girar_eixo_v5(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(-100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(1000);
+		RotateMotorEx(MOTOR_ED, POWER, -206, 0, true, true);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			PlaySound(SOUND_FAST_UP);
+			turn180d();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(500);
+		girar_eixo_v5(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(-100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(1000);
+		RotateMotorEx(MOTOR_ED, POWER, -206, 0, true, true);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			PlaySound(SOUND_FAST_UP);
+			turn180d();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(-100);
+		Wait(500);
+		girar_eixo_v5(-100);
+		Wait(1000);
+		if (isBoxPresent())
+		{
+			//girar_eixo_v5(-100);
+			PlaySound(SOUND_FAST_UP);
+			turn180d3();
+			drop();
+			Off(MOTOR_ED);
+			goBackward30cm2();
+			grab();
+			//StartTask(strangleBoxe);
+			//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
+			return;
+		}
+		girar_eixo_v5(100);
+		Wait(1000);
+	}
+	playAlertBeep(5);
+}
+
+
 void pegar_caixa()
 {
 	Acquire(RobotInOperationMutex);
@@ -916,8 +1448,8 @@ void pegar_caixa()
 		drop();
 		Off(MOTOR_ED);
 		goBackward30cm2();
-		//grab();
-		StartTask(strangleBoxe);
+		grab();
+		//StartTask(strangleBoxe);
 		//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
 		return;
 	}
@@ -934,8 +1466,8 @@ void pegar_caixa()
 		drop();
 		Off(MOTOR_ED);
 		goBackward30cm2();
-		//grab();
-		StartTask(strangleBoxe);
+		grab();
+		//StartTask(strangleBoxe);
 		//RotateMotorEx(MOTOR_ED, POWER, -613, 0, true, true);
 		return;
 	}
@@ -953,8 +1485,8 @@ void pegar_caixa()
 		drop();
 		Off(MOTOR_ED);
 		goBackward30cm();
-		//grab();
-		StartTask(strangleBoxe);
+		grab();
+		//StartTask(strangleBoxe);
 		RotateMotorEx(MOTOR_ED, POWER, -100, 0, true, true);
 		return;
 	}
@@ -970,12 +1502,12 @@ void pegar_caixa()
 		drop();
 		Off(MOTOR_ED);
 		goBackward30cm();
-		//grab();
-		StartTask(strangleBoxe);
+		grab();
+		//StartTask(strangleBoxe);
 		RotateMotorEx(MOTOR_ED, POWER, -100, 0, true, true);
 		return;
 	}
-	segue_frente_v2();
+	//segue_frente_v2();
 	playAlertBeep(5);
 }
 
@@ -984,6 +1516,13 @@ void turn180d2()
      girar_eixo_v2(-100);
      Wait(1000);
      girar_eixo_v3(-100);// era v3
+}
+
+void turn180d3()
+{
+     girar_eixo_v2(-100);
+     Wait(1000);
+     girar_eixo_v8(-100);// era v3
 }
 
 
@@ -1026,10 +1565,11 @@ task main (){
      StartTask(sendRobotPosition);
      StartTask(readFirstSupervisorMessage);
      StartTask(odometria);
+     StartTask(decideSide);
      while (!RobotInOperation);
      sair_base();
      achar_estoque();
-     pegar_caixa();
+     pegar_caixa_v2();
 //     sair_estoque();
      sair_base();
      achar_bancada();
@@ -1074,9 +1614,4 @@ task main (){
 // FAZER A TASK QUE VAI DEIXAR O ROBO ENTRANDO NA OPERAÇÃO
 
 
-
-
-
-
 // - fazer teste para chegar no estoque
-

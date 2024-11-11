@@ -1,8 +1,8 @@
 ## A Fazer
-- [ ] 1 thread para o robô receber comandos via bluetooth do supervisor
-- [ ] 1 thread para realizar calculos de deslocamento e odometria
-- [ ] 1 thread para controlar movimentação do robô
-- [ ] 1 thread para enviar informações do robô para o supervisor
+- [x] 1 thread para o robô receber comandos via bluetooth do supervisor
+- [x] 1 thread para realizar calculos de deslocamento e odometria
+- [x] 1 thread para controlar movimentação do robô
+- [x] 1 thread para enviar informações do robô para o supervisor
 
 
 ## Questionamentos

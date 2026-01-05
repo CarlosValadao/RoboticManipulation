@@ -2,6 +2,8 @@
 
 Este projeto representa a convergência entre a **Engenharia de Computação** e a **Robótica de Precisão**. Desenvolvemos não apenas o firmware de alto desempenho em linguagem **NXC (Not eXactly C)**, mas também toda a **concepção e montagem da estrutura física do robô** 🏗️, otimizada para desafios logísticos autônomos.
 
+https://github.com/user-attachments/assets/496fd0d8-b062-40bb-8e30-a8e4125bc9a9
+
 ---
 
 ## 🏛️ Arquitetura do Sistema e Design de Hardware ⚙️
